@@ -1,0 +1,104 @@
+---
+title: "Ghana yield gap analysis"
+author: "Michiel van Dijk & Tom Morley"
+date: "6 May, 2016"
+output: beamer_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+#dataPath <- "C:/Users/Tomas/Documents/LEI/GHA_presentation"
+dataPath <- "D:\\Dropbox\\Michiel_research\\2285000066 Africa Maize Yield Gap\\Analysis\\GHA\\Presentations\\GHA_presentation"
+#dataPath <- "D:\\Data\\IPOP\\SurveyData\\GHA\\2010\\Data"
+GHAdata <- readRDS(file.path(dataPath, "GHA.rds"))
+library(ggplot2)
+devtools::source_gist("33baa3a79c5cfef0f6df")
+```
+
+# EGC-ISSER Socioeconomic Panel Survey
+- Collaboration between the Economic Growth Center (EGC) at Yale University and the  Institute of Statistical, Social, and Economic Research (ISSER) at the University of Ghana, Legon.
+- Large-scale, nation-wide panel survey in Ghana that will extend for at least 15 years (3 year interval).
+- First wave in 2010, 2013 wave in progress. 
+- Regionally representative sample for the 10 regions of Ghana.
+- 5009 households from 334 Enumeration Areas (EAs).
+
+
+# Summary statistics for key variables
+\footnotesize 
+```{r, results='asis'}
+GHAdata <- readRDS(file.path(dataPath, "GHA.rds"))
+unwanted <- c("hhno", "fallowB", "fallowF", "REGION_CODE", "DISTRICT_CODE")
+GHAdata2 <- GHAdata[!names(GHAdata) %in% unwanted]
+suppressMessages(library(stargazer))
+stargazer(as.data.frame(GHAdata2),  type = "latex", digits=2, header=FALSE, title = "Summary statistics")
+```
+
+
+# Data issue #1: Area measurement
+```{r, echo=FALSE, message=FALSE}
+GHAdata2 <- readRDS(file.path(dataPath, "GHAdata2.rds"))
+ggplot(GHAdata2, aes(x=area)) + geom_histogram(binwidth=0.05, fill="red", color="black") +
+  theme_bw() + ggtitle("Histogram of plot size")
+```
+
+
+# Data issue #2: Location is not reliable
+```{r, echo=FALSE, message=FALSE}
+library(haven)
+Region_map <- readRDS(file.path(dataPath, "Region_map.rds"))
+coords <- readRDS(file.path(dataPath, "Region_map_coords.rds"))
+
+base <- ggplot(Region_map) + 
+  geom_polygon(data=Region_map, aes(x=long, y=lat, group=group, fill=REGION_NAME), colour="black",
+                size = 1) +
+  scale_fill_manual(values = rainbow(n=12, alpha = .8)) +
+  coord_map("mercator") +
+  theme_map() +
+  guides(fill=FALSE) +
+  geom_text(data=coords, aes(label = REGION_NAME, x = x, y = y)) 
+
+gps_data <- read_dta(file.path(dataPath, "data/ShiftedGPSData.dta"))
+gps_plot <- base + geom_point(data=gps_data, aes(x=longitude, y = latitude), col="black", shape=16)
+print(gps_plot)
+```
+
+# Data issue #2: Location is not reliable
+- Code book with information on regions and districts does not match with data
+- Data files seem to have impossible region-district combinations
+- Best would be to use GPS coordinates but datafile is incomplete
+
+# Data issue #3: EGC-ISSER survey versus case-study regions
+```{r, warning=FALSE, echo=FALSE, message=FALSE}
+library(maptools)
+library(dplyr)
+survey <- as.data.frame(do.call(rbind, getKMLcoordinates(file.path(dataPath, "VSA_V3_results.kml")))) %>% select(longitude = V1,latitude = V2)
+
+gf2.2 <- readRDS(file.path(dataPath, "district_map.rds"))
+dis_name = c("Savelugu Nanton", "Nkoranza")
+dis_points <- readRDS(file.path(dataPath, "dis_points.rds"))
+
+
+link <- ggplot(gf2.2, aes(long, lat)) +
+  coord_map() +
+  geom_polygon(aes(group=group),fill="white", colour="black") +
+  guides(fill=FALSE) +
+  geom_polygon(data=subset(gf2.2, NAME_2 %in% dis_name),
+               aes(group=group), size=1, colour = "black", fill="light blue") +
+  guides(fill=FALSE) +
+  geom_text(data=dis_points, aes(label = DISTRICT_NAME, x = x, y = y)) +
+  theme_map() + 
+  geom_point(data=gps_data, aes(x=longitude, y = latitude), col="black", shape=16) +
+  geom_point(data=survey, aes(x=longitude, y = latitude), col="red", shape=16)
+
+print(link)
+```
+
+# Data issue #4: Fertilizer data
+- Type of fertilizer (e.g DAP, UREA, etc.) is not presented (but might be recorded)
+- Different units for fertilizer quantities:
+    + Basket
+    + Beer bottle
+    + Maxi bag
+    + Mini bag
+    + Margarine tin
+- But we miss converions factors...
