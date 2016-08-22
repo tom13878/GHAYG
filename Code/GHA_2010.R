@@ -2,18 +2,21 @@
 ########## GHANA 2010-11 ##############
 ####################################### 
 
+# Tom dataPath
+dataPath <- "C:/Users/Tomas/Documents/LEI/data/GHA/Data"
+
+# LEI Path
+# dataPath <- "W:/LEI/Internationaal Beleid  (IB)/Projecten/2285000066 Africa Maize Yield Gap/SurveyData/GHA/Data"
+
 library(haven)
 library(reshape2)
 library(plyr)
 library(dplyr)
 library(assertive)
 
+
 options(scipen=999)
 
-# setWD
-wd <- "D:\\Data\\Projects\\GHAYG"
-setwd((wd))
-dataPath <- "N:\\Internationaal Beleid  (IB)\\Projecten\\2285000066 Africa Maize Yield Gap\\SurveyData\\GHA\\2010"
 
 #######################################
 ############## LOCATION ###############
@@ -35,7 +38,7 @@ dataPath <- "N:\\Internationaal Beleid  (IB)\\Projecten\\2285000066 Africa Maize
 # way. Not one observation per row!
 # -------------------------------------
 
-oput_maj <- read_dta(file.path(dataPath, "Data/S4AV1.dta"))
+oput_maj <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AV1.dta"))
 oput_maj$id1 <- as.character(as_factor(oput_maj$id1))
 oput_maj$s4v_a78i <- as_factor(oput_maj$s4v_a78i)
 oput_maj$s4v_a78ii <- as_factor(oput_maj$s4v_a78ii)
@@ -168,8 +171,8 @@ rm(list=c("aux", "aux_mze", "cnvrt", "SEC5A", "unit", "variable"))
 # Major season
 # -------------------------------------
 
-chem_maj <- read_dta(file.path(dataPath, "Data/S4AVI1.dta"))
-#chem_maj <- unattribute(chem_maj)
+chem_maj <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AVI1.dta"))
+chem_maj <- unattribute(chem_maj)
 
 chem_maj_1 <- select(chem_maj, hhno, plotno=s4avi1_plotno, s4avi_a162:s4avi_a169iv)
 chem_maj_2 <- select(chem_maj, hhno, plotno=s4avi1_plotno, s4avi_a170:s4avi_a177iv)
@@ -249,12 +252,9 @@ chem_maj_tot[, newnames][is.na(chem_maj_tot[, newnames])] <- 0
 # virtually all fertilizer in Ghana is NPK 15:15:15
 # making it very easy to work out the nitrogen,
 # phosphorous and potassium contents
-chem_maj_tot <- 
-
-
-conv <- read.csv(file.path(paste0(dataPath,"/../../"), "Other/Fertilizer/Fert_comp.csv")) %>%
-  transmute(typ=Fert_type2, n=N_share/100, p=P_share/100) %>%
-  filter(typ %in% levels(fert1$typ))
+chem_maj_tot$N <- chem_maj_tot$inorg*0.15 
+chem_maj_tot$P <- chem_maj_tot$inorg*0.15
+chem_maj_tot$K <- chem_maj_tot$inorg*0.15
 
 # -------------------------------------
 # create binary variables for whether or
@@ -262,47 +262,46 @@ conv <- read.csv(file.path(paste0(dataPath,"/../../"), "Other/Fertilizer/Fert_co
 # -------------------------------------
 
 # maize level - so pesticide or organic fertilizer used on maize
-chem_maj_mze <- ddply(chem_maj_mze, .(hhno, plotno), summarise,
-                      pest=ifelse(any(type %in% c("Herbicide", "Insecticide", "Fungicide")), 1, 0),
-                      manure=ifelse(any(type %in% "Fertilizer (organic)"), 1, 0),
-                      inorg=ifelse(any(type %in% "Fertilizer (inorganic)"), 1, 0))
+chem_maj_tot <- mutate(chem_maj_tot,
+                       herb = ifelse(herbicide > 0, 1, 0),
+                       fung = ifelse(fungicide > 0, 1, 0),
+                       pest = ifelse(insecticide > 0, 1, 0))
 
-chem_maj_mze <- na.omit(chem_maj_mze)
+chem_maj_maize <- filter(chem_maj_tot, crop=="Maize")
+chem_maj_maize$hhno <- as.character(chem_maj_maize$hhno)
 
-chem_maj_mze$hhno <- as.character(chem_maj_mze$hhno)
-
-rm(list=c("chem_maj", "chem_maj_tot"))
+rm(list=c("chem_maj", "chem_maj_tot", "contain_units", "conv_fertunit"))
 
 #######################################
 ############### LABOUR ################
 #######################################
 
-lab_val1 <- read_dta(file.path(dataPath, "Data/S4AIX1.dta")) %>%
+lab_val1 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIX1.dta")) %>%
   select(-id1, -id2, -hhno, s4aix1_plotno)
 lab_val1[is.na(lab_val1)] <- 0
 lab_val1 <- rowSums(lab_val1)
-lab1 <- read_dta(file.path(dataPath, "Data/S4AIX1.dta")) %>%
+lab1 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIX1.dta")) %>%
   select(hhno, plotno=s4aix1_plotno) %>% cbind(lab_val1)
 
-lab_val2 <- read_dta(file.path(dataPath, "Data/S4AIX2.dta")) %>%
+lab_val2 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIX2.dta")) %>%
   select(-id2, -id2, -hhno, s4aix2_plotno)
 lab_val2[is.na(lab_val2)] <- 0
 lab_val2 <- rowSums(lab_val2)
-lab2 <- read_dta(file.path(dataPath, "Data/S4AIX2.dta")) %>%
+lab2 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIX2.dta")) %>%
   select(hhno, plotno=s4aix2_plotno) %>% cbind(lab_val2)
 
-lab_val3 <- read_dta(file.path(dataPath, "Data/S4AIX3.dta")) %>%
+lab_val3 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIX3.dta")) %>%
   select(-id3, -id2, -hhno, s4aix3_plotno)
 lab_val3[is.na(lab_val3)] <- 0
 lab_val3 <- rowSums(lab_val3)
-lab3 <- read_dta(file.path(dataPath, "Data/S4AIX3.dta")) %>%
+lab3 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIX3.dta")) %>%
   select(hhno, plotno=s4aix3_plotno) %>% cbind(lab_val3)
 
-lab_val4 <- read_dta(file.path(dataPath, "Data/S4AIX4.dta")) %>%
+lab_val4 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIX4.dta")) %>%
   select(-id4, -id2, -hhno, s4aix4_plotno)
 lab_val4[is.na(lab_val4)] <- 0
 lab_val4 <- rowSums(lab_val4)
-lab4 <- read_dta(file.path(dataPath, "Data/S4AIX4.dta")) %>%
+lab4 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIX4.dta")) %>%
   select(hhno, plotno=s4aix4_plotno) %>% cbind(lab_val4)
 
 rm(list=c("lab_val1", "lab_val2", "lab_val3", "lab_val4"))
@@ -336,7 +335,7 @@ lab4$hhno <- as.character(lab4$hhno)
 ################ AREAS ################
 #######################################
 
-area <- read_dta(file.path(dataPath, "Data/S4AII.dta"))
+area <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AII.dta"))
 
 area <- select(area, reg=id1, id2, hhno, plotno=plot_no,
                     size=s4aii_a10, unit=s4aii_a11, test_area=s4aii_a12,
@@ -372,7 +371,7 @@ area$hhno <- as.character(area$hhno)
 # value of all animals sold
 # -------------------------------------
 
-lvstk <- read_dta(file.path(dataPath, "Data/S3AI.dta")) %>% 
+lvstk <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S3AI.dta")) %>% 
         select(hhno, lvstk=animal_id, qty=s3ai_1, valu=s3ai_3i) %>%
         mutate(prc=valu/qty)
 
@@ -395,7 +394,7 @@ lvstk$hhno <- as.character(lvstk$hhno)
 # value of farm equipment
 # -------------------------------------
 
-implmt <- read_dta(file.path(dataPath, "Data/S3AII.dta")) %>%
+implmt <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S3AII.dta")) %>%
         select(hhno, implmt=s3aii_0, qty=s3aii_a, valu=s3aii_c1) %>%
         filter(!is.na(implmt) & !qty %in% 0)
 
@@ -416,7 +415,7 @@ implmt$hhno <- as.character(implmt$hhno)
 ############ FALLOW/IRRIG #############
 #######################################
 
-plot <- read_dta(file.path(dataPath, "Data/S4AIII.dta")) %>%
+plot <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIII.dta")) %>%
   select(hhno, plotno=s4aiii_plotno, fallowB=s4aiii_a18a,
          fallowF=s4aiii_a19a, irrig=s4aiii_a26)
 
@@ -433,7 +432,7 @@ plot$hhno <- as.character(plot$hhno)
 #######################################
 
 # at the plot level
-GHA2010 <- left_join(oput_maj_mze, chem_maj_mze)
+GHA2010 <- left_join(oput_maj_mze, chem_maj_maize)
 GHA2010 <- left_join(GHA2010, area)
 GHA2010 <- left_join(GHA2010, plot)
 GHA2010 <- left_join(GHA2010, lab1)
@@ -483,26 +482,16 @@ GHA2010 <- select(GHA2010, -plotno, -qty, -lab_val1, -lab_val2, -lab_val3,
              -lab_val4, -implmt_valu, -lvstk_valu)
 
 # remove everything but the cross section
-rm(list=ls()[!ls() %in% "GHA2010"])
-
-# make some restriction on yld
-GHA2010 <- GHA2010[!GHA2010$yld > 6000, ]
-
-# run a test regression
-lm1 <- lm(yld ~ inorg + pest + manure + crop2 + crop3 + crop4 + crop5 + irrig +
-     asset + asset2 + lab + lab2 + area + area2, data=GHA2010)
-
-summary(lm1)
+rm(list=ls()[!ls() %in% c("GHA2010", "dataPath")])
 
 # read in region variables
-region <- read_dta("data/GHA/S4AV1.dta") %>%
+region <- read_dta(file.path(dataPath, "/EGC-ISSER Public Cleaned Data/S4AV1.dta")) %>%
   select(hhno, reg=id1)
 region$reg <- as_factor(region$reg)
 region$hhno <- as.character(region$hhno)
 
-GHA2010 <- left_join(GHA2010, region)
+GHA2010 <- left_join(GHA2010, unique(region))
 
-lm2 <- lm(yld ~ reg:inorg  + pest + manure + crop2 + crop3 + crop4 + crop5 + irrig +
-            asset + asset2 + lab + lab2 + area + area2, data=GHA2010)
+# saveRDS(GHA2010, file.path(dataPath, "/../GHA2010.rds"))
 
-summary(lm2)
+
