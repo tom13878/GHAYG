@@ -10,7 +10,7 @@ BasePackages <- c("foreign", "stringr", "gdata", "car", "reshape2", "RColorBrewe
 lapply(BasePackages, library, character.only = TRUE)
 SpatialPackages <- c("rgdal", "gdalUtils", "ggmap", "raster", "rasterVis", "rgeos", "sp", "mapproj", "maptools", "proj4")
 lapply(SpatialPackages, library, character.only = TRUE)
-AdditionalPackages <- c("GSIF", "SPEI", "assertive", "countrycode")
+AdditionalPackages <- c("GSIF", "SPEI", "assertive", "countrycode", "sjmisc")
 lapply(AdditionalPackages, library, character.only = TRUE)
 
 # OPTIONS
@@ -54,10 +54,10 @@ country.map <- Get.country.shapefile.f(iso3c, 2)
 
 # PREPARE LSMS SPATIAL DATAPOINTS
 # Get y2_hhid-GIS link
-HH.geo <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data\\ShiftedGPSData.dta")) %>%
+HH.geo <- read_dta(file.path(dataPath, "ShiftedGPSData.dta")) %>%
             dplyr::select(lat = latitude, lon = longitude, id3 = district, id4 = hh_index) 
 
-HH.geo2 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data\\SEC0.dta")) %>%
+HH.geo2 <- read_dta(file.path(dataPath, "SEC0.dta")) %>%
             dplyr::select(id1, id2, id3, id4, hh2010 = hhno) %>%
             mutate(id1 = as_factor(id1))
 
@@ -65,25 +65,20 @@ HH.geo2 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data\\SEC0.dta
 #             dplyr::select(id1, id3, eaid = eano) # NOTE: eaid is not unique!
 
 
-
-            
-# Create list of plot variables
-# Attributes are removed so that join in dplyr works (does not work with new labels that haven package adds)
-unattribute <- function(df){
-  for(i in names(df)) df[[i]] = strip_attributes(df[[i]])
-  return(df)
-}
-
 # create list of HH level variables
-geo.hh <- unattribute(HH.geo) %>% unique()
+geo.hh <- remove_all_labels(HH.geo) %>% unique()
 
 # Create list of eas and coordinates
-# INCLUDES duplicates!!
-geo.base <- left_join(HH.geo2, HH.geo) %>% na.omit %>%
-            mutate(eaid = seq(1:length(lat))) %>%
-            dplyr::select(lat, lon, eaid)
-
+# lat, lon, and id3, id4 combination is not unique, which should not be possible
 check <- HH.geo %>% group_by(id3, id4) %>% summarize(n=n())
+
+# select only unique lat , lon combinations.
+geo.base <- left_join(HH.geo2, HH.geo) %>% 
+            na.omit %>% 
+            dplyr::select(lat, lon) %>% 
+            unique %>%
+            mutate(eaid = seq(1:length(lat)))
+
 
 # Create spatial points 
 standardproj<-"+proj=longlat +datum=WGS84"
@@ -329,9 +324,8 @@ geo.aez <- raster::extract(AEZ, geo.coord) %>%
 
 # ELEVATION
 # Elevation is already presented by the survey
-geo.elev <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data\\ShiftedGPSData.dta")) %>%
+geo.elev <- read_dta(file.path(dataPath, "Data\\ShiftedGPSData.dta")) %>%
   dplyr::select(lat = latitude, lon = longitude, id3 = district, id4 = hh_index, elevation = altitude) 
-
 
 
 # BIND ALL SPATIAL INFORMATION
@@ -369,45 +363,45 @@ plot(country.map)
 points(geo.check.plot, pch = 18, col="red")
 
 # MERGE LSMS AND GEO DATA
-# Merge plot and household level data, Rename and recode LSMS_ISA geo variables
-# Note that order is important. We start with plots and then hh as there are a lot of hh that do not own plots.
-# These are not relevant for our analysis.
-AEZ_code <- read.csv(file.path(dataPath, "Other\\spatial\\AEZ_code.csv"))
-geo.LSMS <- left_join(geo.plot, geo.hh) %>%
-            transmute(
-              lat,
-              lon,
-              #zone,
-              #state,
-              #lga,
-              #sector,
-              dist_hh = dist_household,
-              dist_road,
-              dist_popcenter,
-              dist_market,
-              dist_borderpost,
-              dist_regcap = dist_admctr,
-              AEZ = ssa_aez09,
-              elevation = srtm_nga,
-              slope = srtmslp_nga,
-              twi = twi_nga,
-              nutr_av = sq1,
-              rain_year = h2010_tot,
-              rain_wq = h2010_wetQ,
-              eaid, 
-              hhid, 
-              plotid) %>%
-           mutate(AEZ = droplevels(factor(AEZ,
-                                levels = AEZ_code$code,
-                                labels = AEZ_code$AEZ)))
-            
 
-# Combine LSMS and geo data
-# NOTE, several eaids have different lat and lon coordinates! 
-# Total number of EAs is 500 - in line with manual - so it seems that lat, lon plus eaid is unique identifier.
-# Link on eaid, lat and lon!
-geo.total.plot <- left_join(geo.LSMS, geo.total)
+# Merge plot and household level data
+geo.total.plot <- left_join(geo.hh, geo.plot) %>% 
+  left_join(., geo.total)
+
+# Rename and recode 
+AEZ_code <- read.csv(file.path(paste0(dataPath,"/../../.."), "Other\\Spatial\\Other\\AEZ_code.csv"))
+
+geo.total.plot <- geo.total.plot %>%
+  transmute(
+    lat,
+    lon,
+    dist_hh = dist_household,
+    dist_road = dist_road,
+    dist_popcenter = dist_popcenter,
+    dist_market,
+    dist_borderpost = dist_borderpost,
+    dist_regcap = dist_admctr,
+    AEZ = ssa_aez09,
+    elevation = plot_srtm,
+    slope = plot_srtmslp,
+    twi = plot_twi,
+    nutr_av = sq1,
+    rain_year = h2013_tot,
+    rain_wq = h2013_wetQ,
+    ea_id2, 
+    household_id2, holder_id, 
+    parcel_id, field_id, 
+    region_name=NAME_1, district_name=NAME_2,
+    ph=ph_sd1_sd3, ph2=ph_sd1_sd5,
+    SOC=SOC_sd1_sd3, SOC2=SOC_sd1_sd5, rain_CRU=gsRainfall,
+    SPEI, RootDepth,
+    fs, 
+    YA, YW, YP
+  ) %>%
+  mutate(AEZ = droplevels(factor(AEZ,
+                                 levels = AEZ_code$code,
+                                 labels = AEZ_code$AEZ)))
 
 # Write file
-saveRDS(geo.total.plot, file = file.path(wdPath, paste(iso3c, "/Data/", iso3c, "_", "geo", "_", "total", "_", surveyYear, ".rds", sep="")))
+saveRDS(geo.total.plot, file = file.path("Cache\\GHA_geo_2010.rds"))
 

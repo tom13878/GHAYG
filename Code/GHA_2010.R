@@ -2,21 +2,18 @@
 ########## GHANA 2010-11 ##############
 ####################################### 
 
-# Tom dataPath
-dataPath <- "C:/Users/Tomas/Documents/LEI/data/GHA/Data"
-
-# LEI Path
-# dataPath <- "W:/LEI/Internationaal Beleid  (IB)/Projecten/2285000066 Africa Maize Yield Gap/SurveyData/GHA/Data"
-
 library(haven)
 library(reshape2)
 library(plyr)
 library(dplyr)
 library(assertive)
 
-
 options(scipen=999)
 
+# setWD
+wd <- "D:\\Data\\Projects\\GHAYG"
+setwd((wd))
+dataPath <- "N:\\Internationaal Beleid  (IB)\\Projecten\\2285000066 Africa Maize Yield Gap\\SurveyData\\GHA\\2010"
 
 #######################################
 ############## LOCATION ###############
@@ -38,7 +35,7 @@ options(scipen=999)
 # way. Not one observation per row!
 # -------------------------------------
 
-oput_maj <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AV1.dta"))
+oput_maj <- read_dta(file.path(dataPath, "Data/S4AV1.dta"))
 oput_maj$id1 <- as.character(as_factor(oput_maj$id1))
 oput_maj$s4v_a78i <- as_factor(oput_maj$s4v_a78i)
 oput_maj$s4v_a78ii <- as_factor(oput_maj$s4v_a78ii)
@@ -171,7 +168,7 @@ rm(list=c("aux", "aux_mze", "cnvrt", "SEC5A", "unit", "variable"))
 # Major season
 # -------------------------------------
 
-chem_maj <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AVI1.dta"))
+chem_maj <- read_dta(file.path(dataPath, "Data/S4AVI1.dta"))
 chem_maj <- unattribute(chem_maj)
 
 chem_maj_1 <- select(chem_maj, hhno, plotno=s4avi1_plotno, s4avi_a162:s4avi_a169iv)
@@ -276,32 +273,32 @@ rm(list=c("chem_maj", "chem_maj_tot", "contain_units", "conv_fertunit"))
 ############### LABOUR ################
 #######################################
 
-lab_val1 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIX1.dta")) %>%
+lab_val1 <- read_dta(file.path(dataPath, "Data/S4AIX1.dta")) %>%
   select(-id1, -id2, -hhno, s4aix1_plotno)
 lab_val1[is.na(lab_val1)] <- 0
 lab_val1 <- rowSums(lab_val1)
-lab1 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIX1.dta")) %>%
+lab1 <- read_dta(file.path(dataPath, "Data/S4AIX1.dta")) %>%
   select(hhno, plotno=s4aix1_plotno) %>% cbind(lab_val1)
 
-lab_val2 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIX2.dta")) %>%
+lab_val2 <- read_dta(file.path(dataPath, "Data/S4AIX2.dta")) %>%
   select(-id2, -id2, -hhno, s4aix2_plotno)
 lab_val2[is.na(lab_val2)] <- 0
 lab_val2 <- rowSums(lab_val2)
-lab2 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIX2.dta")) %>%
+lab2 <- read_dta(file.path(dataPath, "Data/S4AIX2.dta")) %>%
   select(hhno, plotno=s4aix2_plotno) %>% cbind(lab_val2)
 
-lab_val3 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIX3.dta")) %>%
+lab_val3 <- read_dta(file.path(dataPath, "Data/S4AIX3.dta")) %>%
   select(-id3, -id2, -hhno, s4aix3_plotno)
 lab_val3[is.na(lab_val3)] <- 0
 lab_val3 <- rowSums(lab_val3)
-lab3 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIX3.dta")) %>%
+lab3 <- read_dta(file.path(dataPath, "Data/S4AIX3.dta")) %>%
   select(hhno, plotno=s4aix3_plotno) %>% cbind(lab_val3)
 
-lab_val4 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIX4.dta")) %>%
+lab_val4 <- read_dta(file.path(dataPath, "Data/S4AIX4.dta")) %>%
   select(-id4, -id2, -hhno, s4aix4_plotno)
 lab_val4[is.na(lab_val4)] <- 0
 lab_val4 <- rowSums(lab_val4)
-lab4 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIX4.dta")) %>%
+lab4 <- read_dta(file.path(dataPath, "Data/S4AIX4.dta")) %>%
   select(hhno, plotno=s4aix4_plotno) %>% cbind(lab_val4)
 
 rm(list=c("lab_val1", "lab_val2", "lab_val3", "lab_val4"))
@@ -335,7 +332,7 @@ lab4$hhno <- as.character(lab4$hhno)
 ################ AREAS ################
 #######################################
 
-area <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AII.dta"))
+area <- read_dta(file.path(dataPath, "Data/S4AII.dta"))
 
 area <- select(area, reg=id1, id2, hhno, plotno=plot_no,
                     size=s4aii_a10, unit=s4aii_a11, test_area=s4aii_a12,
@@ -371,7 +368,7 @@ area$hhno <- as.character(area$hhno)
 # value of all animals sold
 # -------------------------------------
 
-lvstk <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S3AI.dta")) %>% 
+lvstk <- read_dta(file.path(dataPath, "Data/S3AI.dta")) %>% 
         select(hhno, lvstk=animal_id, qty=s3ai_1, valu=s3ai_3i) %>%
         mutate(prc=valu/qty)
 
@@ -394,7 +391,7 @@ lvstk$hhno <- as.character(lvstk$hhno)
 # value of farm equipment
 # -------------------------------------
 
-implmt <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S3AII.dta")) %>%
+implmt <- read_dta(file.path(dataPath, "Data/S3AII.dta")) %>%
         select(hhno, implmt=s3aii_0, qty=s3aii_a, valu=s3aii_c1) %>%
         filter(!is.na(implmt) & !qty %in% 0)
 
@@ -415,7 +412,7 @@ implmt$hhno <- as.character(implmt$hhno)
 ############ FALLOW/IRRIG #############
 #######################################
 
-plot <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIII.dta")) %>%
+plot <- read_dta(file.path(dataPath, "Data/S4AIII.dta")) %>%
   select(hhno, plotno=s4aiii_plotno, fallowB=s4aiii_a18a,
          fallowF=s4aiii_a19a, irrig=s4aiii_a26)
 
@@ -485,7 +482,7 @@ GHA2010 <- select(GHA2010, -plotno, -qty, -lab_val1, -lab_val2, -lab_val3,
 rm(list=ls()[!ls() %in% c("GHA2010", "dataPath")])
 
 # read in region variables
-region <- read_dta(file.path(dataPath, "/EGC-ISSER Public Cleaned Data/S4AV1.dta")) %>%
+region <- read_dta(file.path(dataPath, "/Data/S4AV1.dta")) %>%
   select(hhno, reg=id1)
 region$reg <- as_factor(region$reg)
 region$hhno <- as.character(region$hhno)
