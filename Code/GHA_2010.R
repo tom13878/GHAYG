@@ -281,7 +281,7 @@ lab_val1 <- read_dta(file.path(dataPath, "Data/S4AIX1.dta")) %>%
   select(-id1, -id2, -hhno, s4aix1_plotno)
 lab_val1[is.na(lab_val1)] <- 0
 lab_val1 <- rowSums(lab_val1)
-lab1 <- read_dta(file.path(dataPath, "EGC-ISSER Public Cleaned Data/S4AIX1.dta")) %>%
+lab1 <- read_dta(file.path(dataPath, "Data/S4AIX1.dta")) %>%
   select(hhno, plotno=s4aix1_plotno) %>% cbind(lab_val1)
 
 lab_val2 <- read_dta(file.path(dataPath, "Data/S4AIX2.dta")) %>%
