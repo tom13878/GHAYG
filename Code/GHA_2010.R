@@ -3,6 +3,7 @@
 ####################################### 
 
 library(haven)
+library(tidyr)
 library(reshape2)
 library(plyr)
 library(dplyr)
@@ -132,6 +133,7 @@ SEC5A <- read_dta(file.path(dataPath, "RURAL/SEC 5A.dta"))
 
 # construct an auxillary conversion table
 aux <- melt(SEC5A, id.vars=c("reg", "EA_No", "commcode", "s5", "s5a_1"))
+aux2 <- gather(SEC5A, variable, value, s5a_a:s5a_w)
 aux <- aux[!is.na(aux$value),]
 aux <- ddply(aux, .(s5a_1, variable), summarize, kilo_bar = mean(value, na.rm=TRUE))
 
@@ -179,7 +181,7 @@ rm(list=c("aux", "aux_mze", "cnvrt", "SEC5A", "unit", "variable"))
 # Major season
 # -------------------------------------
 
-chem_maj <- remove_all_labels(read_dta(file.path(dataPath, "Data/S4AVI1.dta")))
+chem_maj <- read_dta(file.path(dataPath, "Data/S4AVI1.dta"))
 
 chem_maj_1 <- select(chem_maj, hhno, plotno=s4avi1_plotno, s4avi_a162:s4avi_a169iv)
 chem_maj_2 <- select(chem_maj, hhno, plotno=s4avi1_plotno, s4avi_a170:s4avi_a177iv)
@@ -198,17 +200,21 @@ names(chem_maj_1) <-
   names(chem_maj_3) <-
   names(chem_maj_4) <-
   names(chem_maj_5) <- c("hhno", "plotno", "chem_use", "type",
-                         "qty", "unit", "value_c", "value_p", "gov", "gov_qty",
-                         "gov_unit", "gov_value_c", "gov_value_p", "crop1",
+                         "qty", "unit", "value_c", "value_p", "sub", "sub_qty",
+                         "sub_unit", "sub_value_c", "sub_value_p", "crop1",
                          "crop2", "crop3", "crop4")
 
 
 # bind all chemicals together and make factors from labelled vectors
-chem_maj_tot <- rbind(chem_maj_1, chem_maj_2, chem_maj_3, chem_maj_4, chem_maj_5)
+chem_maj_tot <- rbind(chem_maj_1, chem_maj_2, chem_maj_3, chem_maj_4, chem_maj_5) %>%
+  remove_all_labels()
 rm(list=c("chem_maj_1", "chem_maj_2", "chem_maj_3", "chem_maj_4", "chem_maj_5"))
 
-# for now only select variables you need for analysis
-chem_maj_tot <- select(chem_maj_tot, -chem_use, -value_p, -gov, - gov_qty, -gov_unit, -gov_value_c, -gov_value_p)
+# Convert pessawas to cedis and add
+chem_maj_tot$value_p = chem_maj_tot$value_p/100
+chem_maj_tot$value = rowSums(cbind(chem_maj_tot$value_c, chem_maj_tot$value_p), na.rm=TRUE)
+chem_maj_tot$sub_value_p = chem_maj_tot$sub_value_p/100
+chem_maj_tot$sub_value = rowSums(cbind(chem_maj_tot$sub_value_c, chem_maj_tot$sub_value_p), na.rm=TRUE)
 
 # make factors of important variables
 chem_maj_tot <- chem_maj_tot[!is.na(chem_maj_tot$type), ]
@@ -216,15 +222,17 @@ chem_maj_tot$type <- factor(as_factor(chem_maj_tot$type))
 newnames <- c("manure", "inorg", "herbicide", "insecticide", "fungicide")
 levels(chem_maj_tot$type) <- newnames
 chem_maj_tot$unit <- as.integer(chem_maj_tot$unit)
+chem_maj_tot$sub_unit <- as.integer(chem_maj_tot$sub_unit)
 chem_maj_tot$crop1 <- as_factor(chem_maj_tot$crop1)
 chem_maj_tot$crop2 <- as_factor(chem_maj_tot$crop2)
 chem_maj_tot$crop3 <- as_factor(chem_maj_tot$crop3)
 chem_maj_tot$crop4 <- as_factor(chem_maj_tot$crop4)
 
+chem_maj_totX <-remove_all_labels(chem_maj_tot)
 # Reshape data so that the crop level is 
 # the unit of observation
-chem_maj_tot <- melt(chem_maj_tot, measure.vars=c("crop1", "crop2", "crop3", "crop4")) %>%
-  rename(crop=value) %>% select(-variable)
+chem_maj_tot <- gather(chem_maj_tot, variable, crop, crop1: crop4) %>% 
+  select(-variable) 
 
 # plots where either the plotno, crop or type
 # of fertilizer are NA can be removed as these
