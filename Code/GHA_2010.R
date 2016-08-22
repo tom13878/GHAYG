@@ -7,7 +7,7 @@ library(reshape2)
 library(plyr)
 library(dplyr)
 library(assertive)
-
+library(sjmisc)
 options(scipen=999)
 
 # setWD
@@ -19,11 +19,22 @@ dataPath <- "N:\\Internationaal Beleid  (IB)\\Projecten\\2285000066 Africa Maize
 ############## LOCATION ###############
 #######################################
 
+location <- read_dta(file.path(dataPath, "Data/SEC0.dta")) %>%
+  transmute(REGNAME = toupper(as_factor(id1)), REGCODE = id1, DISCODE = id2, eaid = id3, hhno = as.character(hhno),
+            ZONE = threezones,  rural = as_factor(urbrur)) %>%
+  remove_all_labels
+
+# match up with the names from the survey (prepared in a seperate file)
+REGZONE <- read.csv(file.path(paste0(dataPath,"/../.."), "Other/Spatial/GHA/REGDISGHA.csv"))
+
+# join with household identifications
+# There seems to an error in the numbering of regions. Some combinations are not given in the codebook, in particular for urban areas.
+# As the join results in incomplete link we do not perform it. 
+#location <- left_join(location, REGZONE)
 
 #######################################
 ########### SOCIO/ECONOMIC ############
 #######################################
-
 
 #######################################
 ############### OUTPUT ################
@@ -168,8 +179,7 @@ rm(list=c("aux", "aux_mze", "cnvrt", "SEC5A", "unit", "variable"))
 # Major season
 # -------------------------------------
 
-chem_maj <- read_dta(file.path(dataPath, "Data/S4AVI1.dta"))
-chem_maj <- unattribute(chem_maj)
+chem_maj <- remove_all_labels(read_dta(file.path(dataPath, "Data/S4AVI1.dta")))
 
 chem_maj_1 <- select(chem_maj, hhno, plotno=s4avi1_plotno, s4avi_a162:s4avi_a169iv)
 chem_maj_2 <- select(chem_maj, hhno, plotno=s4avi1_plotno, s4avi_a170:s4avi_a177iv)
@@ -409,16 +419,19 @@ implmt$hhno <- as.character(implmt$hhno)
 
 
 #######################################
-############ FALLOW/IRRIG #############
+############ FALLOW/IRRIG/SOIL #############
 #######################################
 
 plot <- read_dta(file.path(dataPath, "Data/S4AIII.dta")) %>%
-  select(hhno, plotno=s4aiii_plotno, fallowB=s4aiii_a18a,
-         fallowF=s4aiii_a19a, irrig=s4aiii_a26)
+  transmute(hhno, plotno=s4aiii_plotno, fallowB=s4aiii_a18a,
+         fallowF=s4aiii_a19a, irrig=s4aiii_a26,
+         soildepth=as_factor(s4aiii_a21), soildepth_unit=as_factor(s4aiii_a22), 
+         soiltype=as_factor(s4aiii_a24)) %>%
+         remove_all_labels()
 
 plot$fallowF <- as.integer(plot$fallowF)
 plot$fallowB <- as.integer(plot$fallowB)
-plot$irrig <- ifelse(plot$irrig %in% 1, 1, 0)
+plot$irrig <- ifelse(plot$irrig %in% 2, 0, plot$irrig)
 
 plot$hhno <- as.character(plot$hhno)
 

@@ -66,11 +66,14 @@ HH.geo2 <- read_dta(file.path(dataPath, "SEC0.dta")) %>%
 
 
 # create list of HH level variables
-geo.hh <- remove_all_labels(HH.geo) %>% unique()
-
-# Create list of eas and coordinates
 # lat, lon, and id3, id4 combination is not unique, which should not be possible
-check <- HH.geo %>% group_by(id3, id4) %>% summarize(n=n())
+geo.hh <- remove_all_labels(HH.geo) %>%
+  unique() %>%
+  group_by(id3, id4) %>%
+  mutate(n=n())
+
+# create list of HH2 level variables
+geo.hh2 <- remove_all_labels(HH.geo2) %>% unique() 
 
 # select only unique lat , lon combinations.
 geo.base <- left_join(HH.geo2, HH.geo) %>% 
@@ -320,12 +323,13 @@ AEZ <- raster(file.path(AEZPath, "AEZ_CODE.asc"))
 
 # Get data
 geo.aez <- raster::extract(AEZ, geo.coord) %>%
-    cbind(geo.base,.)
+    cbind(geo.base,.) %>%
+    setNames(c("lat", "lon", "eaid", "AEZ")) 
 
 # ELEVATION
 # Elevation is already presented by the survey
-geo.elev <- read_dta(file.path(dataPath, "Data\\ShiftedGPSData.dta")) %>%
-  dplyr::select(lat = latitude, lon = longitude, id3 = district, id4 = hh_index, elevation = altitude) 
+geo.elev <- read_dta(file.path(dataPath, "ShiftedGPSData.dta")) %>%
+  dplyr::select(lat = latitude, lon = longitude, elevation = altitude) 
 
 
 # BIND ALL SPATIAL INFORMATION
@@ -359,49 +363,70 @@ geo.check.google <- spTransform(geo.check.plot, CRS('+init=epsg:28992'))
 m <- plotGoogleMaps(geo.check.google)
 
 # Plot missing values on map
+# Separate plot for missing AEZ values shows that all missing points are located om the coast.
+# CHECK: TRY http://r-sig-geo.2731867.n2.nabble.com/Assign-a-point-to-its-nearest-polygon-td6482330.html
+# To locate points to nearest polygon
+
 plot(country.map)
 points(geo.check.plot, pch = 18, col="red")
 
-# MERGE LSMS AND GEO DATA
+
+# MERGE LSMS AND GEO DATA 
 
 # Merge plot and household level data
-geo.total.plot <- left_join(geo.hh, geo.plot) %>% 
-  left_join(., geo.total)
+# Several plots have more than two lat, lon codes, which is impossible => deleted.
+# A number of hh do not have geo-coordinates.
+geo.hh <- filter(geo.hh, n <2) %>% dplyr::select(-n)
 
 # Rename and recode 
 AEZ_code <- read.csv(file.path(paste0(dataPath,"/../../.."), "Other\\Spatial\\Other\\AEZ_code.csv"))
 
-geo.total.plot <- geo.total.plot %>%
-  transmute(
-    lat,
-    lon,
-    dist_hh = dist_household,
-    dist_road = dist_road,
-    dist_popcenter = dist_popcenter,
-    dist_market,
-    dist_borderpost = dist_borderpost,
-    dist_regcap = dist_admctr,
-    AEZ = ssa_aez09,
-    elevation = plot_srtm,
-    slope = plot_srtmslp,
-    twi = plot_twi,
-    nutr_av = sq1,
-    rain_year = h2013_tot,
-    rain_wq = h2013_wetQ,
-    ea_id2, 
-    household_id2, holder_id, 
-    parcel_id, field_id, 
-    region_name=NAME_1, district_name=NAME_2,
-    ph=ph_sd1_sd3, ph2=ph_sd1_sd5,
-    SOC=SOC_sd1_sd3, SOC2=SOC_sd1_sd5, rain_CRU=gsRainfall,
-    SPEI, RootDepth,
-    fs, 
-    YA, YW, YP
-  ) %>%
-  mutate(AEZ = droplevels(factor(AEZ,
-                                 levels = AEZ_code$code,
-                                 labels = AEZ_code$AEZ)))
+distance <- read_dta(file.path(dataPath, "S4AII.dta")) %>%
+              dplyr::select(hhno, plot_no, dist_hh = s4aii_a15b) %>%
+              mutate(dist_hh = zap_empty(dist_hh)) %>%
+              remove_all_labels()
+distance$unit[grepl("MILE", distance$dist_hh)] <- "MILE"
+distance$unit[grepl("MLIE", distance$dist_hh)] <- "MILE"
+distance$unit[grepl("KM", distance$dist_hh)] <- "KM"
+distance$unit[grepl("K", distance$dist_hh)] <- "KM"
+distance$unit[grepl(c("METER"), distance$dist_hh)] <- "METER"
+distance$unit[grepl(c("METRE"), distance$dist_hh)] <- "METER"
+distance$unit[grepl("YARD", distance$dist_hh)] <- "YARD"
+distance$unit[grepl("AROUND", distance$dist_hh)] <- "METER"
+distance$dist_hh[grepl("AROUND", distance$dist_hh)] <- 10 # assume it is 10 meter from the house
 
+# TO ADD
+# Recode M to Meter
+# Possible to grepl on c("KM", "K")? Did not work
+# recode all values without a unit to KM (highest frequency.)
+# remove all characters from dist_hh
+# Convert all units.
+
+#distance$unit[grepl("M", distance$dist_hh)] <- "METER"
+
+
+geo.total.plot <- left_join(geo.hh2, geo.hh) %>%
+            rename(hhno = hh2010) %>%
+            left_join(., distance) %>%
+            left_join(., geo.total) %>%
+                  transmute(
+                  lat,
+                  lon,
+                  AEZ,
+                  hhno, 
+                  dist_hh, 
+                  elevation,
+                  region_name, district_name, 
+                  ph, ph2,
+                  SOC, SOC2, rain_CRU=gsRainfall,
+                  SPEI, RootDepth,
+                  fs, 
+                  YA, YW, YP
+                ) %>%
+                mutate(AEZ = droplevels(factor(AEZ,
+                                               levels = AEZ_code$code,
+                                               labels = AEZ_code$AEZ)))
+              
 # Write file
 saveRDS(geo.total.plot, file = file.path("Cache\\GHA_geo_2010.rds"))
 
