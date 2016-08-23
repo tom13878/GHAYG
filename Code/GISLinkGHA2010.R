@@ -385,15 +385,15 @@ distance <- read_dta(file.path(dataPath, "S4AII.dta")) %>%
               dplyr::select(hhno, plot_no, dist_hh = s4aii_a15b) %>%
               mutate(dist_hh = zap_empty(dist_hh)) %>%
               remove_all_labels()
-distance$unit[grepl("MILE", distance$dist_hh)] <- "MILE"
-distance$unit[grepl("MLIE", distance$dist_hh)] <- "MILE"
-distance$unit[grepl("KM", distance$dist_hh)] <- "KM"
-distance$unit[grepl("K", distance$dist_hh)] <- "KM"
-distance$unit[grepl(c("METER"), distance$dist_hh)] <- "METER"
-distance$unit[grepl(c("METRE"), distance$dist_hh)] <- "METER"
-distance$unit[grepl("YARD", distance$dist_hh)] <- "YARD"
-distance$unit[grepl("AROUND", distance$dist_hh)] <- "METER"
-distance$dist_hh[grepl("AROUND", distance$dist_hh)] <- 10 # assume it is 10 meter from the house
+# distance$unit[grepl("MILE", distance$dist_hh)] <- "MILE"
+# distance$unit[grepl("MLIE", distance$dist_hh)] <- "MILE"
+# distance$unit[grepl("KM", distance$dist_hh)] <- "KM"
+# distance$unit[grepl("K", distance$dist_hh)] <- "KM"
+# distance$unit[grepl(c("METER"), distance$dist_hh)] <- "METER"
+# distance$unit[grepl(c("METRE"), distance$dist_hh)] <- "METER"
+# distance$unit[grepl("YARD", distance$dist_hh)] <- "YARD"
+# distance$unit[grepl("AROUND", distance$dist_hh)] <- "METER"
+# distance$dist_hh[grepl("AROUND", distance$dist_hh)] <- 10 # assume it is 10 meter from the house
 
 # TO ADD
 # Recode M to Meter
@@ -428,5 +428,5 @@ geo.total.plot <- left_join(geo.hh2, geo.hh) %>%
                                                labels = AEZ_code$AEZ)))
               
 # Write file
-saveRDS(geo.total.plot, file = file.path("Cache\\GHA_geo_2010.rds"))
+saveRDS(geo.total.plot, file = "D:\\Data\\Projects\\GHAYG\\Cache\\GHA_geo_2010.rds")
 
