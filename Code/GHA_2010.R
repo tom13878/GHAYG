@@ -2,6 +2,8 @@
 ########## GHANA 2010-11 ##############
 ####################################### 
 
+# ASK TOM ABOUT MINOR SEASON
+
 library(haven)
 library(tidyr)
 library(reshape2)
@@ -110,6 +112,9 @@ oput_maj_mze$crop3 <- ifelse(oput_maj_mze$crop_count %in% 3, 1, 0)
 oput_maj_mze$crop4 <- ifelse(oput_maj_mze$crop_count %in% 4, 1, 0)
 oput_maj_mze$crop5 <- ifelse(oput_maj_mze$crop_count %in% 5, 1, 0)
 
+oput_maj_mze <- remove_all_labels(oput_maj_mze)
+
+
 rm(list=c("oput_maj_tot", "oput_maj"))
 
 
@@ -132,8 +137,7 @@ rm(list=c("oput_maj_tot", "oput_maj"))
 SEC5A <- read_dta(file.path(dataPath, "RURAL/SEC 5A.dta"))
 
 # construct an auxillary conversion table
-aux <- melt(SEC5A, id.vars=c("reg", "EA_No", "commcode", "s5", "s5a_1"))
-aux2 <- gather(SEC5A, variable, value, s5a_a:s5a_w)
+aux <- gather(SEC5A, variable, value, s5a_a:s5a_w)
 aux <- aux[!is.na(aux$value),]
 aux <- ddply(aux, .(s5a_1, variable), summarize, kilo_bar = mean(value, na.rm=TRUE))
 
@@ -200,21 +204,24 @@ names(chem_maj_1) <-
   names(chem_maj_3) <-
   names(chem_maj_4) <-
   names(chem_maj_5) <- c("hhno", "plotno", "chem_use", "type",
-                         "qty", "unit", "value_c", "value_p", "sub", "sub_qty",
-                         "sub_unit", "sub_value_c", "sub_value_p", "crop1",
+                         "qty_tot", "unit", "value_c", "value_p", "sub", "qty_sub",
+                         "unit_sub", "value_sub_c", "value_sub_p", "crop1",
                          "crop2", "crop3", "crop4")
 
 
 # bind all chemicals together and make factors from labelled vectors
-chem_maj_tot <- rbind(chem_maj_1, chem_maj_2, chem_maj_3, chem_maj_4, chem_maj_5) %>%
-  remove_all_labels()
+chem_maj_tot <- rbind(chem_maj_1, chem_maj_2, chem_maj_3, chem_maj_4, chem_maj_5)
 rm(list=c("chem_maj_1", "chem_maj_2", "chem_maj_3", "chem_maj_4", "chem_maj_5"))
 
-# Convert pessawas to cedis and add
-chem_maj_tot$value_p = chem_maj_tot$value_p/100
-chem_maj_tot$value = rowSums(cbind(chem_maj_tot$value_c, chem_maj_tot$value_p), na.rm=TRUE)
-chem_maj_tot$sub_value_p = chem_maj_tot$sub_value_p/100
-chem_maj_tot$sub_value = rowSums(cbind(chem_maj_tot$sub_value_c, chem_maj_tot$sub_value_p), na.rm=TRUE)
+# Convert pessawas to cedis, add and remove redundant variables
+chem_maj_tot <- chem_maj_tot %>% 
+  mutate(value_p = value_p/100,
+         value_tot = rowSums(cbind(value_c, value_p), na.rm=TRUE),
+         value_tot = replace(value_tot, value_tot == 0, NA),
+         value_sub_p = value_sub_p/100,
+         value_sub = rowSums(cbind(value_sub_c, value_sub_p), na.rm=TRUE),
+         value_sub = replace(value_sub, value_sub == 0, NA)) %>%
+         select(-value_p, -value_c, -value_sub_p, -value_sub_c) 
 
 # make factors of important variables
 chem_maj_tot <- chem_maj_tot[!is.na(chem_maj_tot$type), ]
@@ -222,17 +229,17 @@ chem_maj_tot$type <- factor(as_factor(chem_maj_tot$type))
 newnames <- c("manure", "inorg", "herbicide", "insecticide", "fungicide")
 levels(chem_maj_tot$type) <- newnames
 chem_maj_tot$unit <- as.integer(chem_maj_tot$unit)
-chem_maj_tot$sub_unit <- as.integer(chem_maj_tot$sub_unit)
+chem_maj_tot$unit_sub <- as.integer(chem_maj_tot$unit_sub)
 chem_maj_tot$crop1 <- as_factor(chem_maj_tot$crop1)
 chem_maj_tot$crop2 <- as_factor(chem_maj_tot$crop2)
 chem_maj_tot$crop3 <- as_factor(chem_maj_tot$crop3)
 chem_maj_tot$crop4 <- as_factor(chem_maj_tot$crop4)
 
-chem_maj_totX <-remove_all_labels(chem_maj_tot)
 # Reshape data so that the crop level is 
 # the unit of observation
 chem_maj_tot <- gather(chem_maj_tot, variable, crop, crop1: crop4) %>% 
-  select(-variable) 
+  select(-variable) %>%
+  mutate(hhno = as.character(hhno))
 
 # plots where either the plotno, crop or type
 # of fertilizer are NA can be removed as these
@@ -242,48 +249,118 @@ chem_maj_tot <- filter(chem_maj_tot, !is.na(plotno),
                        !is.na(crop), !is.na(type))
 
 # read in external file with the correct units
-# corresponding to each unit code. Not correct
-# when using as_factor function
-
+# corresponding to each unit code. 
 contain_units <- read.csv(file.path(dataPath, "../Other/container_unitsGHA.csv"))
-chem_maj_tot <- left_join(chem_maj_tot, contain_units)
 
 # convert fertilizer to kilograms using conversions from extension officers
-conv_fertunit <- read.csv(file.path(paste0(dataPath,"/../../"), "Other/Fertilizer/Fert_GHA.csv"))
+conv_fertunit <- read.csv(file.path(paste0(dataPath,"/../../"), "Other/Fertilizer/Fert_GHA.csv")) %>%
+  select(-note)
 
-# join and multiply qty by fert_conv to give
-# quantity in kilograms.
-chem_maj_tot <- left_join(chem_maj_tot, conv_fertunit)
-chem_maj_tot$qty <- chem_maj_tot$qty*chem_maj_tot$fert_conv
-chem_maj_tot$fert_conv <- chem_maj_tot$unit_name <- chem_maj_tot$unit <- chem_maj_tot$value_c <- NULL
-chem_maj_tot <- select(chem_maj_tot, hhno, plotno, crop, everything())
+# Prepare data for each type of chemical
 
-# change shape of data
-chem_maj_tot <- chem_maj_tot %>%
-  group_by(hhno, plotno, crop, type) %>%
-  summarise(qty=mean(qty)) %>% dcast(hhno + plotno + crop ~ type, value.var="qty")
-chem_maj_tot[, newnames][is.na(chem_maj_tot[, newnames])] <- 0
+# fertilizer
+# Compute subsidised and market prices for inputs averaged over hhno, plotno, crop and chem
+# Convert quantities in correct units, select maize crop
+fert <- filter(chem_maj_tot, type == "inorg") %>%
+  filter(crop == "Maize") %>%
+  left_join(., contain_units) %>%
+  left_join(., conv_fertunit) %>%
+  mutate(qty_tot = qty_tot*fert_conv) %>%
+  select(-fert_conv, -unit_name, -unit) %>%
+  rename(unit = unit_sub) %>%
+  left_join(., contain_units) %>%
+  left_join(., conv_fertunit) %>%
+  mutate(qty_sub = qty_sub*fert_conv) %>%
+  mutate(value_tot = replace(value_tot, value_tot<0, 0),
+         value_sub = replace(value_sub, is.na(value_sub) | value_sub<0, 0),
+         qty_sub = replace(qty_sub, is.na(qty_sub), 0),
+         value_mar = value_tot-value_sub,
+         qty_mar = qty_tot-qty_sub,
+         value_mar = replace(value_mar, value_mar<0, 0),
+         qty_mar = replace(qty_mar, qty_mar<0, 0)) %>%
+  select(hhno, plotno, value_tot, qty_tot, value_mar, qty_mar, value_sub, qty_sub)
 
+# To calculate prices it is important that data is available for both value and qty or both are zero
+# We assume that handful of NA values are zero and ensure that value and qty are pairwise 0
+fert[is.na(fert)] <- 0
+
+fert <- fert %>%
+  mutate(value_tot =ifelse(qty_tot==0, 0, value_tot),
+         value_mar =ifelse(qty_mar==0, 0, value_mar),
+         value_sub =ifelse(qty_sub==0, 0, value_sub),
+         qty_tot =ifelse(value_tot==0, 0, qty_tot),
+         qty_mar =ifelse(value_mar==0, 0, qty_mar),
+         qty_sub =ifelse(value_sub==0, 0, qty_sub))
+
+# Convert quantity to N.
 # virtually all fertilizer in Ghana is NPK 15:15:15
-# making it very easy to work out the nitrogen,
-# phosphorous and potassium contents
-chem_maj_tot$N <- chem_maj_tot$inorg*0.15 
-chem_maj_tot$P <- chem_maj_tot$inorg*0.15
-chem_maj_tot$K <- chem_maj_tot$inorg*0.15
+# making it very easy to work out the nitrogen. 
+# phosphorous and potassium contents are the same but not added
+fert <- fert %>%
+  mutate(N = qty_tot*0.15, 
+         N_sub = qty_sub*0.15,
+         N_mar = qty_mar*0.15) %>%
+        select(-qty_tot, qty_sub, qty_mar)
+         
+# For some plots there are duplicated entries (i.e. two types of fertilizer)
+# Calculate sum/averages over plots
+fert <- fert %>%
+        group_by(hhno, plotno) %>%
+        summarise(WPn = sum(value_tot, na.rm=T)/sum(N, na.rm=T),
+              WPnosub = sum(value_mar, na.rm=T)/sum(N_mar, na.rm=T),
+              WPnsub = sum(value_sub, na.rm=T)/sum(N_sub, na.rm=T),
+              N = sum(N, na.rm=T),
+              N_sub = sum(N_sub, na.rm=T),
+              N_mar = sum(N_mar, na.rm=T))
 
-# -------------------------------------
-# create binary variables for whether or
-# not there is certain chemicals used
-# -------------------------------------
 
-# maize level - so pesticide or organic fertilizer used on maize
-chem_maj_tot <- mutate(chem_maj_tot,
-                       herb = ifelse(herbicide > 0, 1, 0),
-                       fung = ifelse(fungicide > 0, 1, 0),
-                       pest = ifelse(insecticide > 0, 1, 0))
+# Remove all inf, nan
+inf.nan.na.clean.f<-function(x){
+  x[do.call(cbind, lapply(x, is.nan))]<-NA
+  x[do.call(cbind, lapply(x, is.infinite))]<-NA
+  return(x)
+}
+fert <- inf.nan.na.clean.f(fert)
 
-chem_maj_maize <- filter(chem_maj_tot, crop=="Maize")
-chem_maj_maize$hhno <- as.character(chem_maj_maize$hhno)
+# We are not certian in fertilizer conversion factors also apply to other chemicals so we only create simple dummies for there use.
+# Note that insecticide and fungicide is very limited on maize crops (<25)
+
+# Herbicide   
+herb <- filter(chem_maj_tot, type == "herbicide") %>%
+  filter(crop == "Maize") %>%
+  group_by(hhno, plotno) %>%
+  summarize(qty_tot = sum(qty_tot, na.rm=T)) %>%
+  mutate(herb = ifelse(qty_tot >0, 1, 0)) %>%
+  select(hhno, plotno, herb) %>%
+  remove_all_labels()
+
+# Manure
+manure <- filter(chem_maj_tot, type == "manure") %>%
+  filter(crop == "Maize") %>%
+  group_by(hhno, plotno) %>%
+  summarize(qty_tot = sum(qty_tot, na.rm=T)) %>%
+  mutate(manure = ifelse(qty_tot > 0, 1, 0)) %>%
+  select(hhno, plotno, manure) %>%
+  remove_all_labels()
+
+# insecticide
+insec <- filter(chem_maj_tot, type == "insecticide") %>%
+  filter(crop == "Maize") %>%
+  group_by(hhno, plotno) %>%
+  summarize(qty_tot = sum(qty_tot, na.rm=T)) %>%
+  mutate(insec = ifelse(qty_tot >0, 1, 0)) %>%
+  select(hhno, plotno, insec) %>%
+  remove_all_labels()
+
+# fungicide
+fung <- filter(chem_maj_tot, type == "fungicide") %>%
+  filter(crop == "Maize") %>%
+  group_by(hhno, plotno) %>%
+  summarize(qty_tot = sum(qty_tot, na.rm=T)) %>%
+  mutate(fung = ifelse(qty_tot >0, 1, 0)) %>%
+  select(hhno, plotno, fung) %>%
+  remove_all_labels()
+
 
 rm(list=c("chem_maj", "chem_maj_tot", "contain_units", "conv_fertunit"))
 
@@ -330,21 +407,8 @@ lab4$hhno <- as.character(lab4$hhno)
 ############### GEO ###################
 #######################################
 
-# # add Michiel's geo files
-# geo10 <- readRDS(file.path(dataPath, "../../../Other/Spatial/TZA/TZA_geo_2010.rds")) %>% 
-#   select(y2_hhid, lon, lat, plotnum, SPEI, RootDepth, region_name=NAME_1, district_name=NAME_2,
-#          AEZ=land03, ph=ph_sd1_sd3, ph2=ph_sd1_sd5,
-#          SOC=SOC_sd1_sd3, SOC2=SOC_sd1_sd5, rain_CRU=gsRainfall,
-#          dist_hh=dist01,  dist_road=dist02, dist_popcenter=dist03,
-#          dist_market=dist04, dist_borderpost=dist05, dist_regcap=dist06,
-#          hh_elevation=soil01, hh_slope=soil02, hh_twi=soil03,
-#          rain_year=crops07, rain_wq=crops08,
-#          YA, YW, YP) %>%
-#   unique()
-# 
-# geo10 <- read_dta(file.path(dataPath, "TZNPS2GEODTA/HH.Geovariables_Y2.dta")) %>%
-#   select(y2_hhid, lon=lon_modified, lat=lat_modified, dist2town=dist02,
-#          dist2market=dist03, dist2HQ=dist05, avgTemp=clim01, avgpPrecip=clim03)
+geo10 <- readRDS("Cache/GHA_geo_2010.rds") %>%
+  mutate(hhno = as.character(hhno))
 
 #######################################
 ################ AREAS ################
@@ -370,6 +434,39 @@ area <- ddply(area, .(hhno), transform,
 
 area$hhno <- as.character(area$hhno)
 
+#######################################
+############### TRACTOR USE ###########
+#######################################
+# hhno is not in the right format so we use the link file SEC0
+hhlink <- read_dta(file.path(dataPath, "Data/SEC0.dta")) %>%
+  transmute(id1, id2, id3, id4, hhno = as.character(hhno))
+
+tractor <- read_dta(file.path(dataPath, "Data/S4AVII.dta")) %>%
+  select(id1, id2, id3, id4, plotno = s4avii_plotno, mech = s4avii_243) %>%
+  left_join(hhlink, .) %>%
+  mutate(mech = ifelse(mech == 2, 0, mech),
+         hhno = as.character(hhno)) %>%
+  select(-id1, -id2, -id3, -id4) %>%
+  remove_all_labels()
+
+
+#######################################
+############ SEEDS ####################
+#######################################
+# hhno is not in the right format so we use the link file SEC0
+  
+seed1 <- read_dta(file.path(dataPath, "Data/S4AVIII1.dta")) %>%
+  transmute(id1, id2, id3, id4, plotno = s4aviii1_plotno, crop = as_factor(s4aviii_248i),  seed_type = as_factor(s4aviii_249)) %>%
+  filter(crop == "Maize") %>%
+  left_join(hhlink, .) %>%
+  select(-crop, -id1, -id2, -id3, -id4) %>%
+  remove_all_labels()
+
+# Only seed type one used as seed type 2 and 3 are small datasets. We assume seed 1 is the most important
+# seed2 <- read_dta(file.path(dataPath, "Data/S4AVIII1.dta")) %>%
+#   transmute(hhno = id4, plotno = s4aviii1_plotno, crop = as_factor(s4aviii_253i),  seed_type = as_factor(s4aviii_254)) %>%
+#   filter(crop == "Maize") %>%
+#   remove_all_labels()
 
 #######################################
 ############### ASSETS ################
@@ -427,7 +524,7 @@ implmt$hhno <- as.character(implmt$hhno)
 
 
 #######################################
-############ FALLOW/IRRIG/SOIL #############
+############ FALLOW/IRRIG/SOIL ########
 #######################################
 
 plot <- read_dta(file.path(dataPath, "Data/S4AIII.dta")) %>%
@@ -437,10 +534,13 @@ plot <- read_dta(file.path(dataPath, "Data/S4AIII.dta")) %>%
          soiltype=as_factor(s4aiii_a24)) %>%
          remove_all_labels()
 
+# Correct some errors
 plot$fallowF <- as.integer(plot$fallowF)
+plot$fallowF[plot$fallowF %in% c(2, 4, 8)] <- NA
 plot$fallowB <- as.integer(plot$fallowB)
+plot$fallowB[plot$fallowB %in% c(2,8, 4)] <- NA
 plot$irrig <- ifelse(plot$irrig %in% 2, 0, plot$irrig)
-
+plot$irrig[plot$irrig %in% c(3)] <- 1
 plot$hhno <- as.character(plot$hhno)
 
 
@@ -450,66 +550,43 @@ plot$hhno <- as.character(plot$hhno)
 #######################################
 
 # at the plot level
-GHA2010 <- left_join(oput_maj_mze, chem_maj_maize)
+GHA2010 <- left_join(oput_maj_mze, fert)
+GHA2010 <- left_join(GHA2010, herb)
+GHA2010 <- left_join(GHA2010, insec)
+GHA2010 <- left_join(GHA2010, fung)
+GHA2010 <- left_join(GHA2010, manure)
 GHA2010 <- left_join(GHA2010, area)
 GHA2010 <- left_join(GHA2010, plot)
 GHA2010 <- left_join(GHA2010, lab1)
 GHA2010 <- left_join(GHA2010, lab2)
 GHA2010 <- left_join(GHA2010, lab3)
 GHA2010 <- left_join(GHA2010, lab4)
+GHA2010 <- left_join(GHA2010, location)
+GHA2010 <- left_join(GHA2010, geo10)
+GHA2010 <- left_join(GHA2010, seed1)
 
 # at the household level
 GHA2010 <- left_join(GHA2010, implmt)
 GHA2010 <- left_join(GHA2010, lvstk)
-
-# remove any rows thathav an NA for area
-GHA2010 <- GHA2010[!is.na(GHA2010$area),]
+GHA2010 <- left_join(GHA2010, tractor)
 
 #######################################
 #######################################
 #######################################
 
 # set NA values in selected variables to zero
-GHA2010$pest <- ifelse(is.na(GHA2010$pest), 0, GHA2010$pest)
+# This is allowed because question is asked whether they own or use chemicals, assets, etc and then data is explicitely presented for farmers who do.
+GHA2010$herb <- ifelse(is.na(GHA2010$herb), 0, GHA2010$herb)
+GHA2010$insec <- ifelse(is.na(GHA2010$insec), 0, GHA2010$insec)
+GHA2010$fung <- ifelse(is.na(GHA2010$fung), 0, GHA2010$fung)
 GHA2010$manure <- ifelse(is.na(GHA2010$manure), 0, GHA2010$manure)
-GHA2010$inorg <- ifelse(is.na(GHA2010$inorg), 0, GHA2010$inorg)
+GHA2010$N <- ifelse(is.na(GHA2010$N), 0, GHA2010$N)
+GHA2010$N_mar <- ifelse(is.na(GHA2010$N_mar), 0, GHA2010$N_mar)
+GHA2010$N_sub <- ifelse(is.na(GHA2010$N_sub), 0, GHA2010$N_sub)
 GHA2010$implmt_valu <- ifelse(is.na(GHA2010$implmt_valu), 0, GHA2010$implmt_valu)
 GHA2010$lvstk_valu <- ifelse(is.na(GHA2010$lvstk_valu), 0, GHA2010$lvstk_valu)
+GHA2010$mech <- ifelse(is.na(GHA2010$mech), 0, GHA2010$mech)
 
-GHA2010 <- mutate(GHA2010,
-  lab = lab_val1 + lab_val2 + lab_val3 + lab_val4,
-  asset = implmt_valu +lvstk_valu
-)
-
-# calculate total 
-
-GHA2010 <- mutate(GHA2010,
-             yld=qty/area,
-             asset=asset/area_tot,
-             area2=area^2
-)
-
-GHA2010 <- mutate(GHA2010,
-  area2=area^2,
-  asset2 = asset^2,
-  lab2 = lab^2
-)
-
-# select only the necessary variables
-GHA2010 <- select(GHA2010, -plotno, -qty, -lab_val1, -lab_val2, -lab_val3,
-             -lab_val4, -implmt_valu, -lvstk_valu)
-
-# remove everything but the cross section
-rm(list=ls()[!ls() %in% c("GHA2010", "dataPath")])
-
-# read in region variables
-region <- read_dta(file.path(dataPath, "/Data/S4AV1.dta")) %>%
-  select(hhno, reg=id1)
-region$reg <- as_factor(region$reg)
-region$hhno <- as.character(region$hhno)
-
-GHA2010 <- left_join(GHA2010, unique(region))
-
-# saveRDS(GHA2010, file.path(dataPath, "/../GHA2010.rds"))
+saveRDS(GHA2010, "D:/Data/Projects/GHAYG/Cache/GHA2010.rds")
 
 
