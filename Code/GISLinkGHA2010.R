@@ -382,7 +382,7 @@ geo.hh <- filter(geo.hh, n <2) %>% dplyr::select(-n)
 AEZ_code <- read.csv(file.path(paste0(dataPath,"/../../.."), "Other\\Spatial\\Other\\AEZ_code.csv"))
 
 distance <- read_dta(file.path(dataPath, "S4AII.dta")) %>%
-              dplyr::select(hhno, plot_no, dist_hh = s4aii_a15b) %>%
+              dplyr::select(hhno, plotno = plot_no, dist_hh = s4aii_a15b) %>%
               mutate(dist_hh = zap_empty(dist_hh)) %>%
               remove_all_labels()
 # distance$unit[grepl("MILE", distance$dist_hh)] <- "MILE"
@@ -414,6 +414,7 @@ geo.total.plot <- left_join(geo.hh2, geo.hh) %>%
                   lon,
                   AEZ,
                   hhno, 
+                  plotno,
                   dist_hh, 
                   elevation,
                   region_name, district_name, 
