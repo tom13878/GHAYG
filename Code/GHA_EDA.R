@@ -29,10 +29,6 @@ stargazer(as.data.frame(db0), type = "text") # as.data.frame needed because file
 numSummary(db0)
 charSummary(db0)
 
-ETH2011 <- filter(db0, surveyyear == 2011)
-ETH2013 <- filter(db0, surveyyear == 2013)
-summary(ETH2011)
-summary(ETH2013)
 
 # Number of observation per hhid in sample
 plotobs <- db0 %>%
@@ -48,15 +44,6 @@ plotnumber <- db0 %>%
             summarize(n=n())
 
 # Fung and herb
-summary(ETH2011$fung)
-summary(ETH2013$herb)
-table(ETH2013$fung) # Many missing values, not usefull
-table(ETH2013$herb) # Many missing values, not usefull
-
-summary(ETH2013$fung)
-summary(ETH2011$herb)
-table(ETH2011$fung) # Many missing values, not usefull
-table(ETH2011$herb) # Many missing values, not usefull
 
 # Yield
 sjp.frq(db0$logyld, 
@@ -122,8 +109,8 @@ bivariate(dbP, "yld", "N")
 names(dbP)
 
 # Scatter point and smoothed line
-ggplot(data = filter(db0, N>0), aes(x = N, y = yld)) + geom_point() + geom_smooth() + facet_wrap(~surveyyear)
-ggplot(data = db0, aes(x = logN, y = logyld)) + geom_point() + geom_smooth()
+ggplot(data = filter(db0, N>0 & N<=700), aes(x = N, y = yld)) + geom_point() + geom_smooth() + facet_wrap(~ZONE)
+ggplot(data = filter(db0, aes(x = logN, y = logyld)) + geom_point() + geom_smooth()
 ggplot(data = filter(db0, surveyyear == 2012), aes(x = seed_q, y = yld)) + geom_point() + geom_smooth()
 ggplot(data = filter(db0), aes(x = N, y = rain_wq)) + geom_point() + geom_smooth() + facet_wrap(~surveyyear, scales = "free")
 

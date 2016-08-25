@@ -104,7 +104,7 @@ oput_maj_tot <- ddply(oput_maj_tot, .(hhno, plotno), transform,
 
 # select only maize oput and chosen variables
 oput_maj_mze <- filter(oput_maj_tot, crop %in% "Maize") %>%
-        select(hhno, plotno, qty=quantity, unit, value_c, crop_count, legume)
+        select(hhno, plotno, crop_qty_harv=quantity, unit, value_c, crop_count, legume)
 
 # make cropcount into a binary variable
 oput_maj_mze$crop2 <- ifelse(oput_maj_mze$crop_count %in% 2, 1, 0)
@@ -159,12 +159,12 @@ oput_maj_mze <- left_join(oput_maj_mze, select(aux_mze, unit, kilo_bar))
 
 # calculate quantity in kilograms
 
-oput_maj_mze <- mutate(oput_maj_mze, qty = qty *  kilo_bar)
+oput_maj_mze <- mutate(oput_maj_mze, crop_qty_harv = crop_qty_harv *  kilo_bar)
 
 # get rid of the unit variable and NA values for maize quantity
 oput_maj_mze <- select(oput_maj_mze, -unit, -kilo_bar)
-oput_maj_mze <- oput_maj_mze[!is.na(oput_maj_mze$qty) & !oput_maj_mze$qty %in% 0,]
-oput_maj_mze$maze_prc <- oput_maj_mze$qty/oput_maj_mze$value_c
+oput_maj_mze <- oput_maj_mze[!is.na(oput_maj_mze$crop_qty_harv) & !oput_maj_mze$crop_qty_harv %in% 0,]
+oput_maj_mze$maze_prc <- oput_maj_mze$crop_qty_harv/oput_maj_mze$value_c
 oput_maj_mze <- select(oput_maj_mze, -value_c)
 
 oput_maj_mze$hhno <- as.character(oput_maj_mze$hhno)
@@ -587,6 +587,14 @@ GHA2010$implmt_valu <- ifelse(is.na(GHA2010$implmt_valu), 0, GHA2010$implmt_valu
 GHA2010$lvstk_valu <- ifelse(is.na(GHA2010$lvstk_valu), 0, GHA2010$lvstk_valu)
 GHA2010$mech <- ifelse(is.na(GHA2010$mech), 0, GHA2010$mech)
 
+# Rename hhid variable
+GHA2010 <- GHA2010 %>% rename(hhid = hhno)
+
+
+# remove everything but the cross section
+rm(list=ls()[!ls() %in% c("GHA2010", "dataPath")])
+
+# Save file
 saveRDS(GHA2010, "D:/Data/Projects/GHAYG/Cache/GHA2010.rds")
 
 

@@ -1,5 +1,5 @@
 #######################################
-###### ANALYSIS of ETH panel data #####
+###### ANALYSIS of GHA panel data #####
 #######################################
 
 # CHECK:
@@ -8,21 +8,12 @@
 # Imputation of dummy variables.
 # Mean scale variables (see Henningsen)
 # SFA from other package
-# Panel estimator
-# Including CRE
-# relation between residuals and error computed below
-# Translog estimation
-# Do grubbs test for outliers on N?
 # Add texture to soil variables
-
-# From the BID: Addis Ababa, Amhara, Oromiya, SNNP, Tigray, and "other regions" (including Dire Dawa). 
-# In those regions with the greatest urban populations, Addis Ababa and Oromiya, 20 EAs were selected; while in all other strata, 15 EAs were selected.
 
 #######################################
 ############## PACKAGES ETC ###########
 #######################################
 
-library(plyr)
 library(dplyr)
 library(stargazer)
 library(broom)
@@ -37,7 +28,7 @@ library(frontier)
 library(moments)
 library(AER)
 
-wdPath <- "D:\\Data\\Projects\\ETHYG"
+wdPath <- "D:\\Data\\Projects\\GHAYG"
 setwd(wdPath)
 
 source("Code/winsor.r")
@@ -47,25 +38,13 @@ options(scipen=999)
 ############## LOAD DATA ##############
 #######################################
 
-# Load pooled data
-dbP <- readRDS("Cache/Pooled_ETH.rds")
+# Load 2010 data
+dbP <- readRDS("Cache/GHA2010.rds")
 
 #######################################
 ############## CLEANING ###############
 #######################################
 
-
-# Select maize plots and head of household
-dbP <- filter(dbP, status %in% "HEAD", crop_code %in% 2)
-
-# # Create rel_harv_area variable
-# dbP$area_farmer[dbP$area_farmer %in% 0] <- NA
-# dbP$harv_area[dbP$harv_area %in% 0] <- NA
-# 
-# dbP <- dbP %>%
-#   mutate( sh_harv_area = harv_area/area_farmer,
-#           sh_harv_area = ifelse(sh_harv_area >1, 1, sh_harv_area), # for some farmers the harvested area > plot size. Set to 1
-#           rel_harv_area = sh_harv_area * area_gps)
 
 # Create id for plots
 dbP <- dbP %>% 
@@ -79,21 +58,22 @@ dbP <- dbP %>%
 # 3. yld3: Uses relative harvest area to correct gps area
 # To simplify the code we set these values in this part. Subsequent analysis code can then be used for any definition of yield.
 
-# ETH does not present information  on area harvested for 2011. We use area_gps here yld1)
+# GHA does not present information  on area harvested, only plot size. Area is only farmer self-assessed. GPS is not presented. 
+# We use area here but definition is comparable to yld1
 
 dbP <- dbP %>% 
   mutate(
-    area = area_gps, 
+    area = area, 
     #area = area_gps,
     yld = crop_qty_harv/area,
     N = N/area)
 
 
 # As we focus on small scale farmers we restrict area size
-dbP <- filter(dbP, area_gps <=10)
+dbP <- filter(dbP, area <=10)
 
 # cap yield at 18593 kg/ha, the highest potential yield in ETH (not water limited)
-dbP <- filter(dbP, yld <= 18592.85714)
+dbP <- filter(dbP, yld <= 15229.37956)
 
 # Restrict attention to plots that use N < 700. 700kg/hectare  represents an upper bound limit associated with inorganic fertilizer use in the United States under irrigated corn conditions (Sheahan & Barett 2014) 
 dbP <- filter(dbP, N < 700)
@@ -102,77 +82,48 @@ dbP <- filter(dbP, N < 700)
 # NOTE we only have harvest labour
 # CHECK might replace this with adult equivalent variable!
 dbP <- dbP %>%
-  mutate(lab = harv_lab + harv_lab_hire) %>%
+  mutate(lab = lab_val1 + lab_val2 + lab_val3 + lab_val4) %>%
   filter(lab >0) %>%
   select(-lab)
 
+
+# CHECK ADD SOIL VARIABLES
 # Select relevant variables and complete cases
 db0 <- dbP %>% 
-  dplyr::select(hhid, ea_id, id, ZONE = REGNAME, REGNAME = ZONENAME, WOREDACODE, KEBELECODE, parcel_id, field_id, holder_id, # ZONE AND REGNAMES reversed to remain consistent with other LSMS
+  dplyr::select(hhid, id, ZONE, REGNAME, plotno, # ZONE AND REGNAMES reversed to remain consistent with other LSMS
                 AEZ, fs,
                 SOC, SOC2, ph, ph2, RootDepth, 
-                rain_year, rain_wq, 
+                #rain_year, rain_wq, 
                 #SPEI,
                 #YA, YW, YP,
-                slope, elevation,
+                elevation,
                 #nutr_av,
                 yld, 
                 crop_qty_harv, 
                 #sold_qty_kg, sold_qty_gr,
-                harv_lab, harv_lab_hire ,
-                oxen,
-                #ae,
-                impr, 
-                #fung, herb, # Many missing, not useful
+                lab_val1, lab_val2, lab_val3, lab_val4,
+                implmt_valu, lvstk_valu,
+                fung, herb, insec, manure, mech, 
+                #seed_type,
                 N, 
-                #P, 
-                #manure, compost, other_org, # Many missing, not useful
-                #crop_stand, cropping,
-                #legume, 
                 irrig, 
-                area, area_tot, area_gps,
-                sex, age,
-                ed_any, family_size, credit,
-                literate, cage, death, N1555,
-                dist_hh, dist_road, dist_market, dist_popcenter, #dist_regcap,
+                area, area_tot, 
+                #sex, age,
+                #ed_any, family_size, credit,
+                #literate, cage, death, N1555,
+                dist_hh, 
                 #trans_cost,
-                title,
-                popEA,
-                extension, extension2,
-                fert_source,
+                #title,
+                #popEA,
+                #extension, extension2,
+                #fert_source,
                 #road, cost2small_town, bank, micro_finance, ext_agent,
-                crop_count, surveyyear,
+                crop_count, 
                 rural, 
                 lat, lon)
 
 
 summary(db0)
-
-
-
-
-# set NA values in selected variables to zero
-GHA2010$pest <- ifelse(is.na(GHA2010$pest), 0, GHA2010$pest)
-GHA2010$manure <- ifelse(is.na(GHA2010$manure), 0, GHA2010$manure)
-GHA2010$inorg <- ifelse(is.na(GHA2010$inorg), 0, GHA2010$inorg)
-GHA2010$implmt_valu <- ifelse(is.na(GHA2010$implmt_valu), 0, GHA2010$implmt_valu)
-GHA2010$lvstk_valu <- ifelse(is.na(GHA2010$lvstk_valu), 0, GHA2010$lvstk_valu)
-
-GHA2010 <- mutate(GHA2010,
-                  lab = lab_val1 + lab_val2 + lab_val3 + lab_val4,
-                  asset = implmt_valu +lvstk_valu
-)
-
-# calculate total 
-
-GHA2010 <- mutate(GHA2010,
-                  yld=qty/area,
-                  asset=asset/area_tot
-)
-
-# select only the necessary variables
-GHA2010 <- select(GHA2010, -plotno, -qty, -lab_val1, -lab_val2, -lab_val3,
-                  -lab_val4, -implmt_valu, -lvstk_valu)
 
 
 #######################################
@@ -215,22 +166,25 @@ db0 <- db0 %>% mutate (logyld=log(yld),
                        yesN = ifelse(N>0, 1,0), # Dummy when plot does not use fertilizer, following approach of Battese (1997)
                        noN = ifelse(N<=0, 1,0), # Dummy when plot does use fertilizer, following approach of Battese (1997)
                        logN = log(pmax(N, noN)), # maximum of dummy and N following Battese (1997)
-                       lab = harv_lab + harv_lab_hire,
-                       hirelab_sh = harv_lab_hire/(harv_lab_hire + harv_lab)*100,
-                       dumoxen = ifelse(oxen>0, 1,oxen),
+                       lab = lab_val1 + lab_val2 + lab_val3 + lab_val4,
+                       #hirelab_sh = harv_lab_hire/(harv_lab_hire + harv_lab)*100,
+                       #dumoxen = ifelse(oxen>0, 1,oxen),
                        lab=lab/area,
                        #logae = log(ae),
                        #asset = implmt_value + lvstk2_valu,
                        #assetph=asset/area_tot,
                        #logasset = log(assetph+1),
-                       loglab = log(lab+1),
-                       logarea = log(area_gps), # area_gps not area because we want to add plot size as proxy for economies of scale
-                       rain_wq2 = rain_wq*rain_wq,
+                       loglab = log(lab),
+                       logarea = log(area), # area_gps not area because we want to add plot size as proxy for economies of scale
+                       asset = (implmt_valu +lvstk_valu)/area_tot,
+                       logasset = log(asset+1)
+                       #rain_wq2 = rain_wq*rain_wq,
                        #pestherb = ifelse(herb==1 | pest==1, 1, 0),
                        #ext = ifelse(ext_dummy_pp==1 | ext_dummy_ph ==1, 1, 0),
-                       lograin = log(rain_year),
-                       dumfertsource = recode(fert_source, c("'Government' =  1; else = 0")),
-                       surveyyear2 = replace(surveyyear==2011, 1, 0))
+                       #lograin = log(rain_year),
+                       #dumfertsource = recode(fert_source, c("'Government' =  1; else = 0")),
+                       #surveyyear2 = replace(surveyyear==2011, 1, 0)
+                       )
 
 # Add Translog variables
 db0 <- db0 %>% 
@@ -245,11 +199,6 @@ db0 <- db0 %>%
          logNoxen = logN*oxen,
          loglaboxen = loglab*oxen)
 
-# Add learning variable: number of fertilizer users in kebele
-db0 <- db0 %>%
-  group_by(KEBELECODE) %>%
-  mutate(fertusers = sum(N >0))
-  
 # Add CRE variables
 # All plot and hh level variables that change over time need to be added.
 db0 <- db0 %>%
@@ -259,16 +208,17 @@ db0 <- db0 %>%
          noN_bar=mean(noN, na.rm=TRUE),
          area_bar=mean(area, na.rm=TRUE),
          logarea_bar=mean(logarea, na.rm=TRUE),
-         rain_wq_bar=mean(rain_wq, na.rm=TRUE),
+         herb_bar = mean(herb, na.rm=TRUE),
+         manure_bar = mean(manure, na.rm=TRUE),
+         fung_bar = mean(fung, na.rm=TRUE),
+         insec_bar = mean(insec, na.rm=TRUE),
+         #rain_wq_bar=mean(rain_wq, na.rm=TRUE),
          irrig_bar=mean(irrig, na.rm = TRUE),
-         impr_bar=mean(impr, na.rm = TRUE),
-         oxen_bar=mean(dumoxen, na.rm = TRUE),
-         credit_bar=mean(credit,na.rm = TRUE),
-         extension_bar=mean(extension, na.rm=TRUE),
+         #credit_bar=mean(credit,na.rm = TRUE),
+         #extension_bar=mean(extension, na.rm=TRUE),
          crop_count_bar=mean(crop_count2, na.rm=TRUE),
-         slope_bar=mean(slope, na.rm=TRUE),
-         family_size_bar=mean(family_size, na.rm=TRUE),
-         elevation_bar=mean(slope, na.rm=TRUE)
+         #family_size_bar=mean(family_size, na.rm=TRUE),
+         elevation_bar=mean(elevation, na.rm=TRUE)
          ) %>%
   ungroup
 
@@ -388,37 +338,47 @@ saveRDS(db1, "Cache/db1.rds")
 ###### PRODUCTION FUNCTION ############
 #######################################
 
+db1 <- db0
+
 # Cobb Douglas
-olsCD <- lm(logyld ~ noN + logN + loglab + 
-               dumoxen +
+olsCD <- lm(logyld ~ 
+              #noN + 
+              logN + loglab + logasset +
                logarea +
                irrig +
-               impr +
-               slope + elevation +
+               manure + herb + fung + insec +
+               mech +
+               #impr +
+               elevation +
                SOC2 + phdum2 + 
-               rain_wq + 
+               #rain_wq + 
                AEZ +
-               crop_count2 + surveyyear2 +
-               r,
+               crop_count2,
              data = db1)
 
 
-olsCD_CRE <- lm(logyld ~ noN + logN + loglab + dumoxen + logarea +
-               irrig + 
-               impr +
-               slope + elevation +
+olsCD_CRE <- lm(logyld ~ 
+                  #noN + 
+                  logN + loglab + 
+               logasset +
+               logarea +
+               irrig +
+               manure + herb + fung + insec +
+                mech +
+               #impr +
+               elevation +
                SOC2 + phdum2 + 
-               rain_wq + 
+               #rain_wq + 
                AEZ +
-               crop_count2 + surveyyear2 + 
-               noN_bar + logN_bar + loglab_bar + logarea_bar + oxen_bar +
+               crop_count2 + 
+               noN_bar + logN_bar + loglab_bar + logarea_bar + 
                irrig_bar + 
-               impr_bar +
-               slope_bar + 
-               rain_wq_bar +
-               crop_count_bar +
-               r,
+               manure_bar + herb_bar + fung_bar + insec_bar +
+               elevation_bar + 
+               #rain_wq_bar +
+               crop_count_bar,
              data = db1)
+
 
 # Translog function
 olsTL2 <- lm(logyld ~ noN + 
@@ -442,52 +402,62 @@ olsTL2 <- lm(logyld ~ noN +
                r,
              data = db1)
 
+stargazer(olsCD, olsCD_CRE, type="text")
 stargazer(olsCD1, olsCD2, olsTL2, type="text")
 
 # Assess skewness of OLS - should be left skewed which is confirmed.
-hist( residuals(olsCD1), 15)
-hist( residuals(olsCD2), 15)
-skewness(residuals(olsCD1))
-skewness(residuals(olsCD2))
+hist( residuals(olsCD), 15)
+hist( residuals(olsCD_CRE), 15)
+skewness(residuals(olsCD))
+skewness(residuals(olsCD_CRE))
 
 # CHECK: NEED TO DEMEAN THE FUNCTION
 # Frontier estimation
-sfaCD <- sfa(logyld ~ noN + logN +
+sfaCD <- sfa(logyld ~ 
+               #noN + 
+               logN + logasset +
                 loglab +
-                dumoxen +
                 logarea +
                 irrig +
-                impr +
-                slope + elevation +
+                manure + herb + fung + insec +
+                mech +
+                #impr +
+                elevation +
                 SOC2 + phdum2 +
-                rain_wq + 
+                #rain_wq + 
                 AEZ +
-                crop_count2 + surveyyear2 +
-               r,
+                crop_count2,
               data = db1, maxit = 1500, restartMax = 20, printIter = 1, tol = 0.000001)
 
 summary(sfaCD, extraPar = TRUE)
 lrtest(sfaCD)
 
-sfaCD_CRE <- sfa(logyld ~ noN + logN + loglab + logarea + dumoxen +
+sfaCD_CRE <- sfa(logyld ~ noN + logN + loglab + logarea + logasset +
                 irrig + 
-                impr +
-                slope + elevation +
+                manure + herb + 
+                fung + insec +
+                mech +
+                #impr +
+                elevation +
                 SOC2 + phdum2 + 
-                rain_wq + 
+                #rain_wq + 
                 AEZ +
-                crop_count2 + surveyyear2 + 
-                noN_bar + logN_bar + loglab_bar + logarea_bar + oxen_bar +
+                crop_count2 + 
+                noN_bar + logN_bar + loglab_bar + logarea_bar + 
                 irrig_bar + 
-                impr_bar +
-                slope_bar + 
-                #elevation_bar non included because constant over time and plot
-                crop_count_bar +
-                r,
+                #impr_bar +
+                #elevation_bar + same as elevation
+                manure_bar + herb_bar +
+                fung_bar + insec_bar +
+                crop_count_bar,
                 data = db1, maxit = 1500, restartMax = 20, tol = 0.000001)
 
+summary(sfaCD_CRE)
+
 # Translog
-sfaTL_CRE <- sfa(logyld ~ noN + logN + loglab + dumoxen +
+sfaTL_CRE <- sfa(logyld ~ 
+                   noN + 
+                   logN + loglab + dumoxen +
                    logN2 + loglab2 + logNlab + logNimpr + loglabimpr + logNoxen + loglaboxen + 
                    logarea +
                    irrig + 
