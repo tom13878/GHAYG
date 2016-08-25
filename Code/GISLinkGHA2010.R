@@ -5,6 +5,12 @@
 # ``````````````````````````````````````````````````````````````````````````````````````````````````
 # `````````````````````````````````````````````````````````````````````````````````````````````````` 
 
+if(Sys.info()["user"] == "Tomas"){
+  dataPath <- "C:/Users/Tomas/Documents/LEI/data/GHA/Data/EGC-ISSER Public Cleaned Data"
+} else {
+  dataPath <- "N:/Internationaal Beleid  (IB)/Projecten/2285000066 Africa Maize Yield Gap/SurveyData/GHA/2010/Data"
+}
+
 # INSTALL PACKAGES AND SET WORKING DIRECTORY
 BasePackages <- c("foreign", "stringr", "gdata", "car", "reshape2", "RColorBrewer", "plyr", "dplyr", "tidyr", "haven")
 lapply(BasePackages, library, character.only = TRUE)
@@ -385,25 +391,52 @@ distance <- read_dta(file.path(dataPath, "S4AII.dta")) %>%
               dplyr::select(hhno, plotno = plot_no, dist_hh = s4aii_a15b) %>%
               mutate(dist_hh = zap_empty(dist_hh)) %>%
               remove_all_labels()
-# distance$unit[grepl("MILE", distance$dist_hh)] <- "MILE"
-# distance$unit[grepl("MLIE", distance$dist_hh)] <- "MILE"
-# distance$unit[grepl("KM", distance$dist_hh)] <- "KM"
-# distance$unit[grepl("K", distance$dist_hh)] <- "KM"
-# distance$unit[grepl(c("METER"), distance$dist_hh)] <- "METER"
-# distance$unit[grepl(c("METRE"), distance$dist_hh)] <- "METER"
-# distance$unit[grepl("YARD", distance$dist_hh)] <- "YARD"
-# distance$unit[grepl("AROUND", distance$dist_hh)] <- "METER"
-# distance$dist_hh[grepl("AROUND", distance$dist_hh)] <- 10 # assume it is 10 meter from the house
 
-# TO ADD
-# Recode M to Meter
-# Possible to grepl on c("KM", "K")? Did not work
-# recode all values without a unit to KM (highest frequency.)
-# remove all characters from dist_hh
-# Convert all units.
+# make two new variables called dist and unit
+# watch out for how punctuation is delat with.
+# for example "V" in units actually belongs
+# to "V.CLOSE" and there is also "VERY CLOSE"
 
-#distance$unit[grepl("M", distance$dist_hh)] <- "METER"
+dist <- strsplit(distance$dist_hh, "[[:alpha:]]")
+dist <- lapply(dist, function(x) x[!x %in% ""])
+dist <- unlist(lapply(dist, function(x) ifelse(length(x)==0, NA, x)))
+dist <- as.numeric(dist)
 
+unit <- strsplit(distance$dist_hh, "[^[:alpha:]]")
+unit <- lapply(unit, function(x) x[!x %in% ""])
+unit <- unlist(lapply(unit, function(x) ifelse(length(x)==0, NA, x)))
+
+# many spellings of kilometer, miles, meters
+KM <- grep("KILO", unit)
+unit[KM] <- "KM"; rm(KM)
+MILE <- grep("MIL", unit)
+unit[MILE] <- "MILE"; rm(MILE)
+METRE <- grep("MET", unit)
+unit[METRE] <- "METRE"; rm(METRE)
+
+# remaining spellings are much more
+# idiosyncratic
+
+unit <- ifelse(unit %in% "K", "KM", unit)
+unit <- ifelse(unit %in% "KMS", "KM", unit)
+unit <- ifelse(unit %in% "M", "METRE", unit)
+unit <- ifelse(unit %in% "MLIE", "MILE", unit)
+unit <- ifelse(unit %in% "MIN", "MINS", unit)
+
+# make assumption about "AROUND" == 10 metres
+dist <- ifelse(unit %in% "AROUND", 10, dist)
+unit <- ifelse(unit %in% "AROUND", "METRE", unit)
+
+distance$dist_hh <- dist; rm(dist)
+distance$dist_unit <- unit; rm(unit)
+
+# convert everything to KM
+distance$dist_hh <- ifelse(distance$dist_unit %in% "METRE", distance$dist_hh/1000, distance$dist_hh)
+distance$dist_hh <- ifelse(distance$dist_unit %in% "MILE", distance$dist_hh*1.609, distance$dist_hh) # conversion from google
+distance$dist_hh[!distance$dist_unit %in% c("METRE", "KM", "MILE")] <- NA
+
+# unit no longer needed as everything in KM
+distance$dist_unit <- NULL
 
 geo.total.plot <- left_join(geo.hh2, geo.hh) %>%
             rename(hhno = hh2010) %>%
