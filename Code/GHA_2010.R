@@ -164,7 +164,7 @@ oput_maj_mze <- mutate(oput_maj_mze, crop_qty_harv = crop_qty_harv *  kilo_bar)
 # get rid of the unit variable and NA values for maize quantity
 oput_maj_mze <- select(oput_maj_mze, -unit, -kilo_bar)
 oput_maj_mze <- oput_maj_mze[!is.na(oput_maj_mze$crop_qty_harv) & !oput_maj_mze$crop_qty_harv %in% 0,]
-oput_maj_mze$maze_prc <- oput_maj_mze$crop_qty_harv/oput_maj_mze$value_c
+oput_maj_mze$crop_price <- oput_maj_mze$crop_qty_harv/oput_maj_mze$value_c
 oput_maj_mze <- select(oput_maj_mze, -value_c)
 
 oput_maj_mze$hhno <- as.character(oput_maj_mze$hhno)
