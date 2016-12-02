@@ -21,7 +21,7 @@ This document contains some information and data that can be used to compose the
 - We argue that maize is an import food crop in Ghana as well as a source of income for small-scale farmers. We would need data to back this up, for instance share of maize in agricultural production and share of maize in food consumption. 
 - In line with global studies [e.g. @Alexandratos2012; @Ray2013], we stress that maize yields are very low at the moment  and the yield gap is very large 
 - We argue that taken into account present yield levels and yield gap, closing the yield gap has certain consequences for food security/self-sufficiency (supported by data from Martin's PNAS paper).
-- We state that this project uses local (X and X region) and national (micro-household survey analysis) to: (1) better map maize yield gaps, (2) identifies causes, (3) collaborates with farmers to improve crop management by means of demonstrations and (4) provides policy recommendations to improve maize yield.
+- We might add that this project uses local (X and X region) and national (micro-household survey analysis) to: (1) better map maize yield gaps, (2) identifies causes, (3) collaborates with farmers to improve crop management by means of demonstrations and (4) provides policy recommendations to improve maize yield.
 _ where possible we refer to some ongoing policies or goverment documents on agricultural policy and support (for the maize sector) such as FASDEP II to which we like to contribute => imput Felix required.
 
 To support this reasoning we can use the following information:
@@ -30,7 +30,7 @@ To support this reasoning we can use the following information:
 - Comparison of maize yield levels across countries (I asked a colleague to make graphs etc on the basis of FAO data and hope to get this data soon).
 - Share of maize consumption (idem, FAO data) 
 - Some data/information on yield increase needed for food security from Martin
-- Optionally, I also added a graph that illustrates the HH data, which might be used to illustrate the analysis we want to do. A picture of farmers in the field or demonstration plots can also be added.
+- Optionally, I also added a graph that illustrates the HH data, which might be used to illustrate the analysis we want to do. A picture of farmers in the field or demonstration plots can also be added. If we would like to add this, a better figure should be added using ArcGIS with enlargements of case study areas. But perhaps this is not needed as this is more the information we would put in the flyere or use when we actually have resuls available from the studies.
 
 
 ```{r get_data, echo = FALSE, message = FALSE}
