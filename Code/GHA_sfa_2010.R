@@ -93,6 +93,7 @@ db0 <- dbP %>%
   dplyr::select(hhid, id, ZONE, REGNAME, plotno, # ZONE AND REGNAMES reversed to remain consistent with other LSMS
                 AEZ, fs,
                 SOC, SOC2, ph, ph2, RootDepth, 
+                #soildepth, soiltype,
                 #rain_year, rain_wq, 
                 #SPEI,
                 #YA, YW, YP,
@@ -190,17 +191,23 @@ db0 <- db0 %>% mutate (logyld=log(yld),
 db0 <- db0 %>% 
   mutate(logN2 = 0.5*logN*logN,
          loglab2 = 0.5*loglab*loglab,
+         logasset2 = 0.5*logasset*logasset,
          logNlab = logN*loglab,
-         logNimpr = logN*impr,
-         loglabimpr = loglab*impr,
+         logNasset = logN*logasset,
          logNirrig = logN*irrig,
-         loglabirrig = loglab*irrig,
-         logNrain = logN*rain_wq,
-         logNoxen = logN*oxen,
-         loglaboxen = loglab*oxen)
+         loglabirrig = loglab*irrig
+         #logNrain = logN*rain_wq,
+         )
+
+
+# add separate dummy for soil instead of factor for CRE
+#db0 <- cbind(db0, model.matrix( ~ soiltype - 1, data=db0)) 
+
 
 # Add CRE variables
 # All plot and hh level variables that change over time need to be added.
+
+# CHECK STILL ADD SOIL DUMMIES
 db0 <- db0 %>%
   group_by(hhid) %>%
   mutate(loglab_bar=mean(loglab, na.rm=TRUE),
@@ -225,20 +232,20 @@ db0 <- db0 %>%
   
 
 db0 <- droplevels(db0)
-summary(db0)
 
 
 ######################################
 ##### Get plot specific pricess ######
 ######################################
 
+db1 <- db0
 # Load and merge price data 
-Prices <- readRDS("cache/Prices_ETH.rds")
+#Prices <- readRDS("cache/Prices_GHA.rds")
 
 # Merge with panel data
-db1 <- left_join(db0, Prices) %>%
-       mutate(relprice = fertilizer/maize) %>%
-      rename(Pm = maize, Pn = fertilizer)
+#db1 <- left_join(db0, Prices) %>%
+#       mutate(relprice = fertilizer/maize) %>%
+#      rename(Pm = maize, Pn = fertilizer)
 
 # Drop unused levels (e.g. Zanzibar in zone), which are giving problems with sfa
 db1 <- droplevels(db1)
@@ -257,73 +264,41 @@ db1 <- droplevels(db1)
 # household fixed effects
 # include soil variables. And other variables leading to higher demand for fertilizer.
 
-N_dem <- tobit(N ~  dist_hh + dist_market +
-                    irrig + impr +
-                    slope + elevation + 
+N_dem <- tobit(N ~  dist_hh +
+                    irrig + 
+                    elevation + 
                     SOC2 + phdum2 +
-                    extension + credit +
-                    rain_wq + 
-                    dumfertsource +
-                    sex + age + family_size + literate + ed_any +
-                    relprice + 
-                    #fertusers +                 
-                    surveyyear + crop_count2
+                    # extension + credit +
+                    # rain_wq + 
+                    # dumfertsource +
+                    # sex + age + family_size + literate + ed_any +
+                    # relprice + 
+                    # #fertusers +                 
+                    # surveyyear + 
+                    crop_count2
                     , data = db1)
 
-N_dem_CRE <- tobit(N ~ dist_hh + dist_market + 
+N_dem_CRE <- tobit(N ~  
                      irrig +
-                     impr +
-                     slope + elevation +
-                     SOC2 + phdum2 +
-                     extension + credit +
-                     rain_wq +
-                     dumfertsource +
-                     loglab + dumoxen + logarea +
-                     sex + age + family_size + literate + ed_any + 
+                     #impr +
+                     elevation +
+                     SOC2 + 
+                     #phdum2 
+                     #extension + credit +
+                     #rain_wq +
+                     #dumfertsource +
+                     loglab + logarea +
+                     #sex + age + family_size + literate + ed_any + 
                      #log(maize) + log(fertilizer) +
-                     relprice + 
+                     #relprice + 
                      #fertusers +
-                     surveyyear + crop_count2 + 
-                     irrig_bar + impr_bar + slope_bar +
-                     extension_bar + credit_bar + rain_wq_bar +
-                     crop_count_bar + credit_bar + loglab_bar + oxen_bar 
+                     crop_count2  
+                     #irrig_bar + 
+                     #extension_bar + credit_bar + rain_wq_bar +
+                     #crop_count_bar + loglab_bar 
                      , data = db1)
 
-
-
-# library(mhurdle)
-# NX <- mhurdle(N ~ dist_hh + dist_market + 
-#                 irrig +
-#                 impr +
-#                 slope + elevation +
-#                 SOC2 + phdum2 +
-#                 extension + credit +
-#                 rain_wq +
-#                 #rain_wq2+
-#                 dumfertsource +
-#                 loglab + dumoxen + logarea +
-#                 sex + age + family_size + literate + ed_any + 
-#                 log(maize) + log(fertilizer) +                  
-#                 surveyyear + crop_count2 + 
-#                 irrig_bar + impr_bar + crop_count_bar + credit_bar + loglab_bar + oxen_bar |
-#                 dist_hh + dist_market + 
-#                 irrig +
-#                 impr +
-#                 slope + elevation +
-#                 SOC2 + phdum2 +
-#                 extension + credit +
-#                 rain_wq +
-#                 #rain_wq2+
-#                 dumfertsource +
-#                 loglab + dumoxen + logarea +
-#                 sex + age + family_size + literate + ed_any + 
-#                 log(maize) + log(fertilizer) +                  
-#                 surveyyear + crop_count2 + 
-#                 irrig_bar + impr_bar + crop_count_bar + credit_bar + loglab_bar + oxen_bar 
-#               ,dist="ln", data = db1)
-# 
-# summary(NX)
-stargazer(N_dem, N_dem_CRE, type = "text")
+stargazer(N_dem_CRE, type = "text")
 
 summary(N_dem_CRE)
 
@@ -338,7 +313,6 @@ saveRDS(db1, "Cache/db1.rds")
 ###### PRODUCTION FUNCTION ############
 #######################################
 
-db1 <- db0
 
 # Cobb Douglas
 olsCD <- lm(logyld ~ 
@@ -353,7 +327,8 @@ olsCD <- lm(logyld ~
                SOC2 + phdum2 + 
                #rain_wq + 
                AEZ +
-               crop_count2,
+               crop_count2 +
+             r,
              data = db1)
 
 
@@ -376,34 +351,54 @@ olsCD_CRE <- lm(logyld ~
                manure_bar + herb_bar + fung_bar + insec_bar +
                elevation_bar + 
                #rain_wq_bar +
-               crop_count_bar,
-             data = db1)
-
-
-# Translog function
-olsTL2 <- lm(logyld ~ noN + 
-               logN + loglab +
-               logN2 + loglab2 + logNlab + logNimpr + loglabimpr + logNoxen + loglaboxen +
-               #logNirrig +  logNrain + loglabirrig +
-               impr +
-               dumoxen +
-               logarea +
-               irrig + 
-               slope + elevation +
-               SOC2 + phdum2 + 
-               rain_wq + 
-               AEZ +
-               crop_count2 + surveyyear2 + 
-               noN_bar + logN_bar + loglab_bar + logarea_bar + oxen_bar +
-               irrig_bar + 
-               impr_bar +
-               slope_bar + elevation_bar +
-               crop_count_bar+
+               crop_count_bar +
                r,
              data = db1)
 
-stargazer(olsCD, olsCD_CRE, type="text")
-stargazer(olsCD1, olsCD2, olsTL2, type="text")
+# Translog function
+olsTL <- lm(logyld ~  
+               logN + loglab + logasset +
+               logN2 + loglab2 + logasset2 + logNlab + logNasset +
+               #logNirrig +  logNrain + loglabirrig +
+               logarea +
+               irrig + 
+               manure + herb + fung + insec +
+               mech +
+               elevation +
+               SOC2 + phdum2 + 
+               #rain_wq + 
+               AEZ +
+               crop_count2 +  
+               r,
+             data = db1)
+
+
+# Translog CRE function
+olsTL_CRE <- lm(logyld ~  
+               logN + loglab + logasset +
+               logN2 + loglab2 + logasset2 + logNlab + logNasset +
+               #logNirrig +  logNrain + loglabirrig +
+               logarea +
+               irrig + 
+               manure + herb + fung + insec +
+               mech +
+               elevation +
+               SOC2 + phdum2 + 
+               #rain_wq + 
+               AEZ +
+               crop_count2 +  
+               logN_bar + loglab_bar + logarea_bar + 
+               irrig_bar + 
+               manure_bar + herb_bar + fung_bar + insec_bar +
+               elevation_bar + 
+               #rain_wq_bar +
+               crop_count_bar +
+               r,
+             data = db1)
+
+
+
+stargazer(olsCD, olsCD_CRE, olsTL, olsTL_CRE, type="text")
 
 # Assess skewness of OLS - should be left skewed which is confirmed.
 hist( residuals(olsCD), 15)
@@ -414,8 +409,7 @@ skewness(residuals(olsCD_CRE))
 # CHECK: NEED TO DEMEAN THE FUNCTION
 # Frontier estimation
 sfaCD <- sfa(logyld ~ 
-               #noN + 
-               logN + logasset +
+                logN + logasset +
                 loglab +
                 logarea +
                 irrig +
@@ -426,96 +420,88 @@ sfaCD <- sfa(logyld ~
                 SOC2 + phdum2 +
                 #rain_wq + 
                 AEZ +
-                crop_count2,
+                crop_count2 +
+               r,
               data = db1, maxit = 1500, restartMax = 20, printIter = 1, tol = 0.000001)
 
 summary(sfaCD, extraPar = TRUE)
 lrtest(sfaCD)
 
-sfaCD_CRE <- sfa(logyld ~ noN + logN + loglab + logarea + logasset +
-                irrig + 
-                manure + herb + 
-                fung + insec +
-                mech +
-                #impr +
-                elevation +
-                SOC2 + phdum2 + 
-                #rain_wq + 
-                AEZ +
-                crop_count2 + 
-                noN_bar + logN_bar + loglab_bar + logarea_bar + 
+# PROBABLY NOT MUCH USE BECAUSE OF CROSS_SECTION
+sfaCD_CRE <- sfa(logyld ~ 
+                   #noN + 
+                   logN + logasset +
+                   loglab +
+                   logarea +
+                   irrig +
+                   manure + herb + fung + insec +
+                   mech +
+                   #impr +
+                   elevation +
+                   SOC2 + phdum2 +
+                   #rain_wq + 
+                   #AEZ +
+                   crop_count2 +
+                   r +
+                logN_bar + loglab_bar + logarea_bar + 
                 irrig_bar + 
                 #impr_bar +
                 #elevation_bar + same as elevation
-                manure_bar + herb_bar +
-                fung_bar + insec_bar +
+                #manure_bar + herb_bar +
+                #fung_bar + insec_bar + # GIVES ERROR, PROBABLY CONSTANT
                 crop_count_bar,
                 data = db1, maxit = 1500, restartMax = 20, tol = 0.000001)
 
 summary(sfaCD_CRE)
 
-# Translog
-sfaTL_CRE <- sfa(logyld ~ 
-                   noN + 
-                   logN + loglab + dumoxen +
-                   logN2 + loglab2 + logNlab + logNimpr + loglabimpr + logNoxen + loglaboxen + 
+
+
+# Translog CRE
+sfaTL <- sfa(logyld ~  
+                   logN + loglab + logasset +
+                   logN2 + loglab2 + logasset2 + logNlab + logNasset +
+                   #logNirrig +  logNrain + loglabirrig +
                    logarea +
                    irrig + 
-                   impr +
-                   slope + 
+                   manure + herb + fung + insec +
+                   mech +
+                   elevation +
                    SOC2 + phdum2 + 
-                   rain_wq + 
+                   #rain_wq + 
                    AEZ +
-                   crop_count2 + surveyyear2 + 
-                   noN_bar + logN_bar + loglab_bar + logarea_bar + oxen_bar +
-                   irrig_bar + 
-                   impr_bar +
-                   slope_bar + 
-                   crop_count_bar +
+                   crop_count2 +  
                    r
                  ,data = db1, maxit = 1500, restartMax = 20, tol = 0.000001)
 
-summary(sfaTL_CRE, extraPar = TRUE)
+summary(sfaTL, extraPar = TRUE)
 lrtest(sfaCD_CRE)
 
 
-# Appears that including FS leads to distance variables to reduce significancy!
-sfaCD_CRE_Z <- sfa(logyld ~ noN + logN + loglab + dumoxen + 
-                logarea +
-                irrig + 
-                impr +
-                slope + elevation +
-                SOC2 + phdum2 + 
-                rain_wq + 
-                #fs +
-                AEZ +
-                crop_count2 + surveyyear2 + 
-                noN_bar + logN_bar + loglab_bar + logarea_bar + oxen_bar +
-                irrig_bar + 
-                impr_bar +
-                slope_bar +
-                rain_wq_bar +
-                crop_count_bar + 
-                r
-              | 
-                sex +
-                age + 
-                title +
-                literate +
-                ed_any +
-                extension +
-                credit +
-                dist_hh +
-                dist_market +
-                popEA 
-                #hirelab_sh has 38 missing values
-                -1
-              ,data = db1, maxit = 1500, restartMax = 20, tol = 0.000001)
+# Translog CRE
+sfaTL_CRE <- sfa(logyld ~  
+                   logN + loglab + logasset +
+                   logN2 + loglab2 + logasset2 + logNlab + logNasset +
+                   #logNirrig +  logNrain + loglabirrig +
+                   logarea +
+                   irrig + 
+                   manure + herb + fung + insec +
+                   mech +
+                   elevation +
+                   SOC2 + phdum2 + 
+                   #rain_wq + 
+                   AEZ +
+                   crop_count2 +  
+                   logN_bar + loglab_bar + logarea_bar + 
+                   irrig_bar + 
+                   #manure_bar + herb_bar + fung_bar + insec_bar + # CHECK
+                   #elevation_bar + 
+                   #rain_wq_bar +
+                   crop_count_bar +
+                   r,
+                  data = db1, maxit = 1500, restartMax = 20, tol = 0.000001)
 
-summary(sfaCD_CRE_Z, extraPar = TRUE)
-
-summary(db1)
-lrtest(sfaCD_CRE_Z)
+summary(sfaTL_CRE, extraPar = TRUE)
+lrtest(sfaCD_CRE)
 
 
 # Compute profit maximizing Pn per zone and other summary statistics

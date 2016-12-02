@@ -104,7 +104,8 @@ oput_maj_tot <- ddply(oput_maj_tot, .(hhno, plotno), transform,
 
 # select only maize oput and chosen variables
 oput_maj_mze <- filter(oput_maj_tot, crop %in% "Maize") %>%
-        select(hhno, plotno, crop_qty_harv=quantity, unit, value_c, crop_count, legume)
+        select(hhno, plotno, crop_qty_harv=quantity, unit, value_c, value_p, crop_count, legume) %>%
+        mutate(value_p = value_p/100)
 
 # make cropcount into a binary variable
 oput_maj_mze$crop2 <- ifelse(oput_maj_mze$crop_count %in% 2, 1, 0)
@@ -141,6 +142,9 @@ aux <- gather(SEC5A, variable, value, s5a_a:s5a_w)
 aux <- aux[!is.na(aux$value),]
 aux <- ddply(aux, .(s5a_1, variable), summarize, kilo_bar = mean(value, na.rm=TRUE))
 
+
+# CHECK: value_p not used?! And maize price x1- too high
+
 # Add unit codes by hand from BID
 variable <- as.character(unique(aux$variable))[order(as.character(unique(aux$variable)))]
 unit <- c(2, 27, 4, 6, 7, 29, 8, 9, 11, 12, 14, 17, 18, 19, 34, 37, 23, 24, 26)
@@ -158,8 +162,10 @@ aux_mze <- filter(aux, s5a_1 %in% "MAIZE")
 oput_maj_mze <- left_join(oput_maj_mze, select(aux_mze, unit, kilo_bar))
 
 # calculate quantity in kilograms
-
 oput_maj_mze <- mutate(oput_maj_mze, crop_qty_harv = crop_qty_harv *  kilo_bar)
+
+
+value = rowSums(cbind(value_c, value_p), na.rm=TRUE),
 
 # get rid of the unit variable and NA values for maize quantity
 oput_maj_mze <- select(oput_maj_mze, -unit, -kilo_bar)

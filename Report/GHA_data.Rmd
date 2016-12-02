@@ -1,0 +1,232 @@
+---
+title: "Ghana Data"
+author: "Tomas Morley"
+date: "5 July 2016"
+output: pdf_document
+---
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+# get packages
+library(ggplot2)
+library(dplyr)
+library(stargazer)
+# library(corrplot)
+library(car)
+library(rgl)
+library(grid)
+library(gridExtra)
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+# read in the data
+filePath <- "C:/Users/Tomas/Documents/LEI"
+GHA2010 <- readRDS(file.path(filePath, "data/GHA/GHA2010.rds"))
+```
+
+```{r echo=FALSE}
+# read in functions
+source(file.path(filePath, "functions/summTabs.R"))
+source(file.path(filePath, "functions/removeOutliers.R"))
+```
+
+# Introduction 
+
+This pdf document introduces and describes the Ghana data from the . . . . Yale survey. Below you will find exploratory analysis and a first basic analysis of the 2010 cross section. Data is available for one year 
+
+## maps of Ghana
+
+```{r echo=FALSE, message=FALSE, eval=FALSE}
+# source in file the has the maps of Ghana
+library(gridExtra)
+source(file.path(filePath, "pro-gap/GHA/GHAmaps.R"))
+grid.arrange(gmap1, gmap3, ncol=2)
+```
+
+```{r echo=FALSE}
+# basic counts of available data
+households <- group_by(GHA2010, reg) %>% summarise(households=length(unique(hhno)))
+plots <- group_by(GHA2010, reg) %>% summarise("maize plots"=n())
+fert <- group_by(GHA2010, reg) %>% summarise("plots with fert"=sum(N>0))
+out <- left_join(households, plots) %>% left_join(fert)
+knitr::kable(out)
+```
+
+# Univariate Analysis
+
+Table 1 below shows summary statistics for key variables in the GHA 2010 data.
+
+```{r echo=FALSE}
+probs <- c(0.1, 0.25, 0.5, 0.75, 0.9)
+varNames <- c("yld", "N", "P", "K", "herb", "fung", "pest",
+              "lab", "asset", "area", "area_tot", "irrig",
+              "maze_prc", "crop_count")
+Nat <- summTab(GHA2010, varNames=varNames, probs=probs)
+knitr::kable(Nat, caption="Summary Statistics for key variables")
+```
+
+Two variables key to this analysis are the nitrogen and yld variables. plotted below in level and log form figure ??.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+par(mfrow=c(1, 2))
+with(GHA2010, {
+  hist(yld, breaks="FD", freq=FALSE, ylab="Density")
+  lines(density(yld), lwd=2)
+  lines(density(yld, adjust=0.5), lwd=1)
+  rug(yld)
+  box()
+})
+with(GHA2010, {
+  hist(log(yld), breaks="FD", freq=FALSE, ylab="Density")
+  lines(density(log(yld)), lwd=2)
+  lines(density(log(yld), adjust=0.5), lwd=1)
+  rug(log(yld))
+  box()
+})
+```
+
+And for nitrogen similar plots are shown in figure ??
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+par(mfrow=c(1, 2))
+with(GHA2010, {
+  hist(N[N>0 & N < 200], breaks="FD", freq=FALSE, ylab="Density")
+  lines(density(N[N>0 & N < 200]), lwd=2)
+  lines(density(N[N>0 & N < 200], adjust=0.5), lwd=1)
+  rug(N[N>0 & N < 200])
+  box()
+})
+with(GHA2010, {
+  hist(log(N[N>0 & N < 200]), breaks="FD", freq=FALSE, ylab="Density")
+  lines(density(log(N[N>0 & N < 200])), lwd=2)
+  lines(density(log(N[N>0 & N < 200]), adjust=0.5), lwd=1)
+  rug(log(N[N>0 & N < 200]))
+  box()
+})
+```
+
+
+# Multivariate Analysis
+
+```{r eval=FALSE}
+GHA2010_2 <-GHA2010[,varNames]
+COR.DIS <- cor(GHA2010_2[complete.cases(GHA2010_2),])
+corrplot(COR.DIS, method="square")
+```
+
+```{r }
+GHA2010$lyld <- log(GHA2010$yld)
+GHA2010$lN <- log(GHA2010$N + 1)
+# GHA2010_2 <-GHA2010[,c(varNames, "lN", "lyld")]
+# COR.DIS <- cor(GHA2010_2[complete.cases(GHA2010_2),])
+# corrplot(COR.DIS, method="square")
+```
+
+
+```{r}
+scatter3d(lyld ~ lN + crop_count, id.n=3, data=GHA2010)
+```
+
+```{r}
+scatterplotMatrix(~lyld + lN + asset + lab, span=0.7, data=GHA2010)
+```
+
+# Building the Cobb Douglas model
+
+```{r echo=FALSE, eval=FALSE}
+# start with just a cobb douglass regression of
+# yld against nitrogen
+CD1 <- lm(log(yld) ~ log(I(N+1)), data = db1)
+output <- round(summary(CD1)$coefficients, 3)
+# row.names(output) <- c()
+knitr::kable(output, caption="Cobb Douglas")
+```
+
+```{r echo=FALSE, eval=FALSE}
+# Cobb Douglas regression - add in assets and labour
+CD1 <- lm(log(yld) ~ log(I(N+1)) + log(asset + 1) + log(lab), data=db1)
+output <- round(summary(CD1)$coefficients, 3)
+# row.names(output) <- c()
+knitr::kable(output, caption="Cobb Douglas")
+```
+
+```{r echo=FALSE, eval=FALSE}
+CD1 <- lm(log(yld) ~ log(I(N+1)):REGNAME + log(asset + 1) + log(lab), data=db1)
+output <- round(summary(CD1)$coefficients, 3)
+# row.names(output) <- c()
+knitr::kable(output, caption="Cobb Douglas")
+```
+
+```{r echo=FALSE, eval=FALSE}
+CD1 <- lm(log(yld) ~ log(I(N+1)):REGNAME + log(asset + 1) + log(lab) + 
+            #legume +
+            herb + fung + log(area_tot) + irrig + crop_count + log(area),
+          data=db1)
+output <- round(summary(CD1)$coefficients, 3)
+# row.names(output) <- c()
+knitr::kable(output, caption="Cobb Douglas")
+```
+
+
+```{r echo=FALSE, eval=FALSE}
+plot(CD1)
+
+# look at residuals and outliers
+rd <- residuals(CD1)
+lev <- influence(CD1)$hat
+rdstudent <- rstudent(CD1)
+
+par(mfrow=c(2, 2))
+plot(lev, main="Leverages")
+plot(rd, main = "Residuals (rd)")
+plot(rdstudent, main = "Studentized Residuals")
+
+plot(residuals(CD1) ~ predict(CD1),
+     xlab=expression(hat(eta)),ylab="rd", main="Residuals vs. fitted values (link scale)")
+qqplot(residuals(CD1))
+```
+
+```{r echo=FALSE, eval=FALSE}
+# Cobb Douglas regression - baseline region is Western Region
+CD1 <- lm(log(yld) ~ log(I(N+1)) + log(asset + 1) + log(lab) + legume, data=GHA2010)
+output <- round(summary(CD1)$coefficients, 3)
+# row.names(output) <- c()
+knitr::kable(output, caption="Cobb Douglas")
+```
+
+```{r echo=FALSE, eval=FALSE}
+# Cobb Douglas regression - Nitrogen effect different across regions
+CD1 <- lm(log(yld) ~ log(I(N+1)):reg + log(asset + 1) + log(lab), data=GHA2010)
+output <- round(summary(CD1)$coefficients, 3)
+# row.names(output) <- c()
+knitr::kable(output, caption="Cobb Douglas")
+```
+
+
+```{r echo=FALSE, eval=FALSE}
+# quadratic regression - basic regression
+QUAD1 <- lm(yld ~ N + I(N^2), data=db1)
+```
+
+```{r echo=FALSE, eval=FALSE}
+QUAD2 <- lm(yld ~ N:REGNAME + I(N^2):REGNAME, data=db1)
+```
+
+```{r echo=FALSE, eval=FALSE}
+QUAD3 <- lm(yld ~ N:REGNAME + I(N^2):REGNAME + asset + I(asset^2), data=db1)
+```
+
+```{r echo=FALSE, eval=FALSE}
+QUAD4 <- lm(yld ~ N:REGNAME + I(N^2):REGNAME + asset + I(asset^2) + area + I(area^2), data=db1)
+```
+
+```{r echo=FALSE, eval=FALSE}
+QUAD5 <- lm(yld ~ N:REGNAME + I(N^2):REGNAME + asset + I(asset^2) + area + I(area^2) +
+             manure + herb + fung +
+              manure + mech + area_tot + I(area_tot^2) + irrig + lab + lab^2,
+            data=db1)
+```
+
+```{r, results="asis", echo=FALSE, eval=FALSE}
+stargazer(QUAD1, QUAD2, QUAD3, QUAD4, header=FALSE, type='text')
+```
+# Spatial Analysis

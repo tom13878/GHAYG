@@ -1,13 +1,25 @@
 #######################################
-###### ANALYSIS of ETH price data #####
+###### ANALYSIS of GHA price data #####
 #######################################
 
-# Compare prices with other prices and check if they are realistic!
+# CHECK Compare prices with other prices and check if they are realistic!
 
-wdPath <- "D:\\Data\\Projects\\ETHYG"
+
+#######################################
+############## READ DATA ##############
+#######################################
+
+source("D:/Data/Projects/GHAYG/Code/GHA_2010.r")
+
+
+#######################################
+############## PACKAGES ETC ###########
+#######################################
+
+wdPath <- "D:\\Data\\Projects\\GHAYG"
 setwd(wdPath)
 
-dataPath <- "N:\\Internationaal Beleid  (IB)\\Projecten\\2285000066 Africa Maize Yield Gap\\SurveyData"
+surveyPath <- "N:\\Internationaal Beleid  (IB)\\Projecten\\2285000066 Africa Maize Yield Gap\\SurveyData"
 
 library(dplyr)
 library(ggplot2)
@@ -19,82 +31,179 @@ library(DescTools)
 library(sandwich)
 library(lmtest)
 library(assertive)
-library(sjmisc)
-library(lazyeval)
 
 options(scipen=999)
 
 # winsor code
 source("Code/winsor.R")
 
+
 #######################################
-############## LOAD DATA ##############
+############ PROCESSING ###############
 #######################################
 
-# Load pooled data 
-dbP <- readRDS("Cache/Pooled_ETH.rds") %>%
- filter(crop_code %in% 2 & status %in% "HEAD") %>%
- select(hhid, ZONE = REGNAME, REGNAME = ZONENAME, WOREDACODE, KEBELECODE, parcel_id, field_id, holder_id, # ZONE AND REGNAMES reversed to remain consistent with other LSMS
-        WPn, crop_price, surveyyear) 
 
-# read in nitrogen conversion file
-conv <- read.csv(file.path(dataPath, "Other/Fertilizer/Fert_comp.csv")) %>%
-  transmute(typ=Fert_type2, n=N_share/100, p=P_share/100) %>%
-  filter(typ %in% c("UREA", "DAP"))
+# -------------------------------------
+# Similar to output chemical inputs have
+# been recorded in a bizarre way and need
+# to be rearranged for both seasons
+# -------------------------------------
 
-# Note that we only know on which field fertilizer is used, not if they are maize plots.
-# We decide to calculate the average fertilizer price over maize plots only as it is possible that because of subsidies or other policies 
-# the price of the same type of fertilizer (e.g. UREA) can differ between type of crop, even in the same region
-# There is no information on kg and value of fertilizer purchased for 2011. We will use 2013 data for 2011.
-# There is information  on maize prices for 2011, which we will use at plot level. However due to the small number of observations
-# we will use the regional averages from 2013 but correct for inflation.  
-# Inflation is not a problem if we use relative prices (pmaize/pfert), which are assumed to have same inflation.
+# -------------------------------------
+# Major season
+# -------------------------------------
 
-# Select maize fields per survey year
-ETH2013 <- filter(dbP, surveyyear ==2013) %>% 
-  select(-WPn, -crop_price) %>% 
-  unique # There are four hhid-parcel combinations that have two entries, one with price data, one without => duplicates deleted
+chem_maj <- read_dta(file.path(dataPath, "Data/S4AVI1.dta"))
 
-# read in the fertilizer data, linkin location data and combine in one file
-fert2013_1 <- read_dta(file.path(dataPath, "ETH\\2013\\Data\\Post-Planting\\sect3_pp_w2.dta")) %>%
-  dplyr::select(holder_id, household_id, household_id2, parcel_id, field_id, typ=pp_s3q15, purch_kg=pp_s3q16c, valu=pp_s3q16d) %>%
-  mutate(household_id = zap_empty(household_id),
-         typ = ifelse(typ %in% 1, "UREA", NA))
+chem_maj_1 <- select(chem_maj, hhno, plotno=s4avi1_plotno, s4avi_a162:s4avi_a169iv)
+chem_maj_2 <- select(chem_maj, hhno, plotno=s4avi1_plotno, s4avi_a170:s4avi_a177iv)
+chem_maj_3 <- select(chem_maj, hhno, plotno=s4avi1_plotno, s4avi_a178:s4avi_a185iv)
+chem_maj_4 <- select(chem_maj, hhno, plotno=s4avi1_plotno, s4avi_a186:s4avi_a193iv)
+chem_maj_5 <- select(chem_maj, hhno, plotno=s4avi1_plotno, s4avi_a194:s4avi_a201iv)
 
-fert2013_2 <- read_dta(file.path(dataPath, "ETH\\2013\\Data\\Post-Planting\\sect3_pp_w2.dta")) %>%
-  dplyr::select(holder_id, household_id, household_id2, parcel_id, field_id, typ=pp_s3q18, purch_kg=pp_s3q19c, valu=pp_s3q19d) %>%
-  mutate(household_id = zap_empty(household_id),
-         typ = ifelse(typ %in% 1, "DAP", NA))
+chem_maj_1 <- chem_maj_1[!is.na(chem_maj_1$s4avi_a162),]
+chem_maj_2 <- chem_maj_2[!is.na(chem_maj_2$s4avi_a170),]
+chem_maj_3 <- chem_maj_3[!is.na(chem_maj_3$s4avi_a178),]
+chem_maj_4 <- chem_maj_4[!is.na(chem_maj_4$s4avi_a186),]
+chem_maj_5 <- chem_maj_5[!is.na(chem_maj_5$s4avi_a194),]
 
-# Combine fertilizer files and join with ETH2013 to select only maize plots. 
-fert2013 <- remove_all_labels(rbind(fert2013_1, fert2013_2)) %>%
-            mutate(hhid = ifelse(is.na(household_id), household_id2, household_id)) %>% # Ensure that hhid is the same as in dbP
-            dplyr::select(-household_id, -household_id2) %>%
-            do(filter(., complete.cases(.))) %>%
-            left_join(ETH2013,.) %>%
-            unique() %>% 
-            do(filter(., complete.cases(.))) %>%
-            left_join(., conv) %>%
-            mutate(purch_kg = ifelse(purch_kg == 0, NA, purch_kg),
-                   valu = ifelse(valu == 0, NA, valu),
-                   Qn=purch_kg*n,
-                   price = valu/Qn) 
+names(chem_maj_1) <-
+  names(chem_maj_2) <-
+  names(chem_maj_3) <-
+  names(chem_maj_4) <-
+  names(chem_maj_5) <- c("hhno", "plotno", "chem_use", "type",
+                         "qty_tot", "unit", "value_c", "value_p", "sub", "qty_sub",
+                         "unit_sub", "value_sub_c", "value_sub_p", "crop1",
+                         "crop2", "crop3", "crop4")
+
+
+# bind all chemicals together and make factors from labelled vectors
+chem_maj_tot <- rbind(chem_maj_1, chem_maj_2, chem_maj_3, chem_maj_4, chem_maj_5)
+rm(list=c("chem_maj_1", "chem_maj_2", "chem_maj_3", "chem_maj_4", "chem_maj_5"))
+
+# Convert pessawas to cedis, add and remove redundant variables
+chem_maj_tot <- chem_maj_tot %>% 
+  mutate(value_p = value_p/100,
+         value_tot = rowSums(cbind(value_c, value_p), na.rm=TRUE),
+         value_tot = replace(value_tot, value_tot == 0, NA),
+         value_sub_p = value_sub_p/100,
+         value_sub = rowSums(cbind(value_sub_c, value_sub_p), na.rm=TRUE),
+         value_sub = replace(value_sub, value_sub == 0, NA)) %>%
+  select(-value_p, -value_c, -value_sub_p, -value_sub_c) 
+
+# make factors of important variables
+chem_maj_tot <- chem_maj_tot[!is.na(chem_maj_tot$type), ]
+chem_maj_tot$type <- factor(as_factor(chem_maj_tot$type))
+newnames <- c("manure", "inorg", "herbicide", "insecticide", "fungicide")
+levels(chem_maj_tot$type) <- newnames
+chem_maj_tot$unit <- as.integer(chem_maj_tot$unit)
+chem_maj_tot$unit_sub <- as.integer(chem_maj_tot$unit_sub)
+chem_maj_tot$crop1 <- as_factor(chem_maj_tot$crop1)
+chem_maj_tot$crop2 <- as_factor(chem_maj_tot$crop2)
+chem_maj_tot$crop3 <- as_factor(chem_maj_tot$crop3)
+chem_maj_tot$crop4 <- as_factor(chem_maj_tot$crop4)
+
+# Reshape data so that the crop level is 
+# the unit of observation
+chem_maj_tot <- gather(chem_maj_tot, variable, crop, crop1: crop4) %>% 
+  select(-variable) %>%
+  mutate(hhno = as.character(hhno))
+
+# plots where either the plotno, crop or type
+# of fertilizer are NA can be removed as these
+# cannot be linked for the analysis.
+
+chem_maj_tot <- filter(chem_maj_tot, !is.na(plotno),
+                       !is.na(crop), !is.na(type))
+
+# read in external file with the correct units
+# corresponding to each unit code. 
+contain_units <- read.csv(file.path(dataPath, "../Other/container_unitsGHA.csv"))
+
+# convert fertilizer to kilograms using conversions from extension officers
+conv_fertunit <- read.csv(file.path(paste0(dataPath,"/../../"), "Other/Fertilizer/Fert_GHA.csv")) %>%
+  select(-note)
+
+# fertilizer
+# Compute subsidised and market prices for inputs averaged over hhno, plotno, crop and chem
+# Convert quantities in correct units, select maize crop
+fert <- filter(chem_maj_tot, type == "inorg") %>%
+  filter(crop == "Maize") %>%
+  left_join(., contain_units) %>%
+  left_join(., conv_fertunit) %>%
+  mutate(qty_tot = qty_tot*fert_conv) %>%
+  select(-fert_conv, -unit_name, -unit) %>%
+  rename(unit = unit_sub) %>%
+  left_join(., contain_units) %>%
+  left_join(., conv_fertunit) %>%
+  mutate(qty_sub = qty_sub*fert_conv) %>%
+  mutate(value_tot = replace(value_tot, value_tot<0, 0),
+         value_sub = replace(value_sub, is.na(value_sub) | value_sub<0, 0),
+         qty_sub = replace(qty_sub, is.na(qty_sub), 0),
+         value_mar = value_tot-value_sub,
+         qty_mar = qty_tot-qty_sub,
+         value_mar = replace(value_mar, value_mar<0, 0),
+         qty_mar = replace(qty_mar, qty_mar<0, 0)) %>%
+  select(hhno, plotno, value_tot, qty_tot, value_mar, qty_mar, value_sub, qty_sub)
+
+#rm(chem_maj, chem_maj_tot)
+
+# To calculate prices it is important that data is available for both value and qty or both are zero
+# We assume that handful of NA values are zero and ensure that value and qty are pairwise 0
+fert[is.na(fert)] <- 0
+
+fert <- fert %>%
+  mutate(value_tot =ifelse(qty_tot==0, 0, value_tot),
+         value_mar =ifelse(qty_mar==0, 0, value_mar),
+         value_sub =ifelse(qty_sub==0, 0, value_sub),
+         qty_tot =ifelse(value_tot==0, 0, qty_tot),
+         qty_mar =ifelse(value_mar==0, 0, qty_mar),
+         qty_sub =ifelse(value_sub==0, 0, qty_sub))
+
+# Convert quantity to N.
+# virtually all fertilizer in Ghana is NPK 15:15:15
+# making it very easy to work out the nitrogen. 
+# phosphorous and potassium contents are the same but not added
+fert <- fert %>%
+  mutate(N = qty_tot*0.15, 
+         N_sub = qty_sub*0.15,
+         N_mar = qty_mar*0.15) %>%
+  select(-qty_tot, qty_sub, qty_mar)
+
+# Fertilizer prices 
+# Note that for some plots there are duplicated entries (i.e. two types of fertilizer)
+# We use all information to calculate regional price averages
+
+key <- select(GHA2010, hhid, plotno, ZONE, REGNAME, DISCODE)
+
+fert <- fert %>%
+  rename(hhid = hhno) %>%
+  mutate(Pn = value_tot/N,
+            Pnm = value_mar/N_mar,
+            Pns = value_sub/N_sub) %>%
+  select(hhid, plotno, Pn, Pnm, Pns) 
+
+
+# Remove all inf, nan
+inf.nan.na.clean.f<-function(x){
+  x[do.call(cbind, lapply(x, is.nan))]<-NA
+  x[do.call(cbind, lapply(x, is.infinite))]<-NA
+  return(x)
+}
+
+fert <- inf.nan.na.clean.f(fert) %>%
+    left_join(key, .) %>%
+  dplyr::select(-hhid, -plotno)
 
 # Construct price data.frame
-# Note that some ea_id2 codes have two or more lat, lon coordinates, which should not be possible. For this reason we use KEBELE as lowest level for calculating median prices
-# construct base dataframe with all zones, regions, woreda and kebele
-
-base <- dbP %>% 
-  dplyr::select(ZONE, REGNAME, WOREDACODE, KEBELECODE) %>%
+# construct base dataframe with all zones, regions and districts
+base <- GHA2010 %>% 
+  dplyr::select(ZONE, REGNAME, DISCODE) %>%
   unique() %>%
   na.omit
 
-# Values are winsored aggregates are presented for at least 5 values
-# market  prices
-fertmar <- fert2013 %>%
-  mutate(price = winsor2(price))
-
-medianPrice_f <- function(df, level, group){
+# Values are winsored by surveyyear, aggregates are presented for at least 5 values
+medianPrice_f <- function(df, level, group, type){
   prices <- df %>% 
     group_by_(.dots = c(group)) %>%
     dplyr::summarize(
@@ -103,97 +212,159 @@ medianPrice_f <- function(df, level, group){
     filter(number>=5) %>%
     mutate(level = level) %>%
     select(-number) 
-   #prices <- setNames(prices, c(group, "price", "level")) 
-   out <- left_join(base, prices)
-   return(out)
+  #prices <- setNames(prices, c(group, "price", "level")) 
+  out <- left_join(base, prices) %>%
+    mutate(type = type)
+  return(out)
 }
 
-fpCountry <- fertmar %>% 
+
+# market  prices
+fertmar <- fert %>%
+  select(-Pn, -Pns) %>%
+  mutate(price = winsor2(Pnm))
+
+fpCountry <- fertmar %>%
   dplyr::summarize(price = median(price, na.rm=T)) %>%
   mutate(level = "country") 
 fpCountry <- mutate(base, price = fpCountry$price,
-                       level = "country")
+                    level = "country",
+                    type = "Pnm")
 
-fpZone <- medianPrice_f(fertmar, "zone", c("ZONE"))
-fpRegion <- medianPrice_f(fertmar, "region", c("ZONE", "REGNAME"))
-fpWoreda <- medianPrice_f(fertmar, "woreda", c("ZONE", "REGNAME", "WOREDACODE"))
-fpKebele <- medianPrice_f(fertmar, "kebele", c("ZONE", "REGNAME", "WOREDACODE", "KEBELECODE"))
+fpZone <- medianPrice_f(fertmar, "zone", c("ZONE"), "Pnm")
+fpRegion <- medianPrice_f(fertmar, "region", c("ZONE", "REGNAME"), "Pnm")
+fpDistrict <- medianPrice_f(fertmar, "district", c("ZONE", "REGNAME", "DISCODE"), "Pnm")
 
-fertPrice <- bind_rows(fpWoreda, fpKebele, fpRegion, fpZone, fpCountry) %>%
+fertMarPrice <- bind_rows(fpDistrict, fpRegion, fpZone, fpCountry) %>%
   na.omit %>%
   spread(level, price) %>%
-  mutate(price = ifelse(!is.na(kebele), kebele, 
-                  ifelse(!is.na(woreda), woreda,
-                         ifelse(!is.na(zone), zone, country))),
-         source = ifelse(!is.na(kebele), "kebele", 
-                        ifelse(!is.na(woreda), "woreda",
-                               ifelse(!is.na(zone), "zone", "country"))),
+  mutate(regPrice = ifelse(!is.na(district), district, 
+                        ifelse(!is.na(region), region,
+                               ifelse(!is.na(zone), zone, country))),
+         source = ifelse(!is.na(district), "district", 
+                         ifelse(!is.na(region), "region",
+                                ifelse(!is.na(zone), "zone", "country"))),
          product = "fertilizer") %>%
-  select(-country, -zone, -region, -woreda, -kebele)
+  select(-country, -zone, -region, -district)
 
-# Maize prices
-# Using inflation rate for 2011 and 2012. These years were selected as the main part of the survey takes place in these years.
-# from world bank:
-# http://data.worldbank.org/indicator/FP.CPI.TOTL.ZG/countries/TZ?display=graph
-# -------------------------------------
+rm(fpCountry, fpZone, fpRegion, fpDistrict, fertmar)
 
-inflation <- read.csv(file.path(dataPath,"Other/Inflation/inflation.csv"))
-rate2012 <- inflation$inflation[inflation$code=="ET" & inflation$year==2012]/100
-rate2013 <- inflation$inflation[inflation$code=="ET" & inflation$year==2013]/100
-inflate <- (1 + rate2012)*(1 + rate2013)
+# Market and subsidised prices
+fertmix <- fert %>%
+  select(-Pnm, -Pns) %>%
+  mutate(price = winsor2(Pn))
 
-# Values are winsored per surveyyear. 2011 values are inflated to 2013 levels and used at hhid level. 
-# Regional values for 2013 are used to impute missing values for 2011 and 2013.
-# Aggregates are presented for at least 5 values.
-maizemar2011 <- filter(dbP, surveyyear ==2011) %>% 
-  select(hhid, holder_id, field_id, parcel_id, ZONE, REGNAME, WOREDACODE, KEBELECODE, surveyyear, price = crop_price) %>%
-  mutate(price = winsor2(price),
-         price = price*inflate)
-
-maizemar2013 <- filter(dbP, surveyyear ==2013) %>% 
-  select(hhid, holder_id, field_id, parcel_id, ZONE, REGNAME, WOREDACODE, KEBELECODE, surveyyear, price = crop_price) %>%
-  mutate(price = winsor2(price))
-
-mpCountry <- maizemar2013 %>% 
+fpCountry <- fertmix %>%
   dplyr::summarize(price = median(price, na.rm=T)) %>%
   mutate(level = "country") 
-mpCountry <- mutate(base, price = mpCountry$price,
-                    level = "country")
+fpCountry <- mutate(base, price = fpCountry$price,
+                    level = "country",
+                    type = "Pn")
 
-mpZone <- medianPrice_f(maizemar2013, "zone", c("ZONE"))
-mpRegion <- medianPrice_f(maizemar2013, "region", c("ZONE", "REGNAME"))
-mpWoreda <- medianPrice_f(maizemar2013, "woreda", c("ZONE", "REGNAME", "WOREDACODE"))
-mpKebele <- medianPrice_f(maizemar2013, "kebele", c("ZONE", "REGNAME", "WOREDACODE", "KEBELECODE"))
+fpZone <- medianPrice_f(fertmix, "zone", c("ZONE"), "Pn")
+fpRegion <- medianPrice_f(fertmix, "region", c("ZONE", "REGNAME"), "Pn")
+fpDistrict <- medianPrice_f(fertmix, "district", c("ZONE", "REGNAME", "DISCODE"), "Pn")
 
-maizePrice <- bind_rows(mpWoreda, mpKebele, mpRegion, mpZone, mpCountry) %>%
+fertMixPrice <- bind_rows(fpDistrict, fpRegion, fpZone, fpCountry) %>%
   na.omit %>%
   spread(level, price) %>%
-  mutate(price = ifelse(!is.na(kebele), kebele, 
-                        ifelse(!is.na(woreda), woreda,
+  mutate(regPrice = ifelse(!is.na(district), district, 
+                        ifelse(!is.na(region), region,
                                ifelse(!is.na(zone), zone, country))),
-         source = ifelse(!is.na(kebele), "kebele", 
-                         ifelse(!is.na(woreda), "woreda",
+         source = ifelse(!is.na(district), "district", 
+                         ifelse(!is.na(region), "region",
+                                ifelse(!is.na(zone), "zone", "country"))),
+         product = "fertilizer") %>%
+  select(-country, -zone, -region, -district)
+
+rm(fpCountry, fpZone, fpRegion, fpDistrict, fertmix)
+
+# Subsidised prices
+fertsub <- fert %>%
+  select(-Pnm, -Pn) %>%
+  mutate(price = winsor2(Pns))
+
+fpCountry <- fertsub %>%
+  dplyr::summarize(price = median(price, na.rm=T)) %>%
+  mutate(level = "country") 
+fpCountry <- mutate(base, price = fpCountry$price,
+                    level = "country",
+                    type = "Pns")
+
+fpZone <- medianPrice_f(fertsub, "zone", c("ZONE"), "Pns")
+fpRegion <- medianPrice_f(fertsub, "region", c("ZONE", "REGNAME"), "Pns")
+fpDistrict <- medianPrice_f(fertsub, "district", c("ZONE", "REGNAME", "DISCODE"), "Pns")
+
+fertSubPrice <- bind_rows(fpDistrict, fpRegion, fpZone, fpCountry) %>%
+  na.omit %>%
+  spread(level, price) %>%
+  mutate(regPrice = ifelse(!is.na(district), district, 
+                        ifelse(!is.na(region), region,
+                               ifelse(!is.na(zone), zone, country))),
+         source = ifelse(!is.na(district), "district", 
+                         ifelse(!is.na(region), "region",
+                                ifelse(!is.na(zone), "zone", "country"))),
+         product = "fertilizer") %>%
+  select(-country, -zone, -region, -district)
+
+rm(fpCountry, fpZone, fpRegion, fpDistrict, fertsub)
+
+# Maize prices
+maize <- GHA2010 %>% 
+  dplyr::select(ZONE, REGNAME, DISCODE, price = crop_price) %>%
+  mutate(price = winsor2(price))
+
+fpCountry <- maize %>%
+  dplyr::summarize(price = median(price, na.rm=T)) %>%
+  mutate(level = "country")
+fpCountry <- mutate(base, price = fpCountry$price,
+                    level = "country",
+                    type = "Pc") 
+
+fpZone <- medianPrice_f(maize, "zone", c("ZONE"), "Pc")
+fpRegion <- medianPrice_f(maize, "region", c("ZONE", "REGNAME"), "Pc")
+fpDistrict <- medianPrice_f(maize, "district", c("ZONE", "REGNAME", "DISCODE"), "Pc")
+
+maizePrice <- bind_rows(fpDistrict, fpRegion, fpZone, fpCountry) %>%
+  na.omit %>%
+  spread(level, price) %>%
+  mutate(regPrice = ifelse(!is.na(district), district, 
+                        ifelse(!is.na(region), region,
+                               ifelse(!is.na(zone), zone, country))),
+         source = ifelse(!is.na(district), "district", 
+                         ifelse(!is.na(region), "region",
                                 ifelse(!is.na(zone), "zone", "country"))),
          product = "maize") %>%
-  select(-country, -zone, -region, -woreda, -kebele)
+  select(-country, -zone, -region, -district)
 
-# Create price file at plot level and substitute regional prices when plot level price is not available.
-# Again, we winsor the prices first
-plotFertPrice <- select(dbP, hhid, holder_id, field_id, parcel_id, ZONE, REGNAME, WOREDACODE, KEBELECODE, surveyyear, WPn) %>%
-    left_join(fertPrice) %>%
-    mutate(WPn = winsor2(WPn),
-           price = ifelse(is.na(WPn), price, WPn)) %>%
-  select(-WPn) 
- 
-plotMaizePrice <- bind_rows(maizemar2011, maizemar2013) %>%
-  rename(crop_price = price) %>%
-  left_join(maizePrice) %>%
-  mutate(price = ifelse(is.na(crop_price), price, crop_price)) %>%
-  select(-crop_price)  
+rm(fpCountry, fpZone, fpRegion, fpDistrict, maize)
 
-Prices <- rbind(plotFertPrice, plotMaizePrice) %>% 
-  unique() %>% # There are four hhid-parcel combinations that have two entries, one with price data, one without => duplicates deleted
-  select(-source) %>%
-  spread(product, price)
+# Combine fert price data files 
+regPrice <- bind_rows(fertMixPrice, fertMarPrice, fertSubPrice, maizePrice) %>% ungroup
+  
 
-saveRDS(Prices, file = "Cache\\Prices_ETH.rds")
+# Create price file at plot level.
+# Again, we winsor the prices for each type of price and per surveyyear
+plotPrice <- select(GHA2010, hhid, plotno, ZONE, REGNAME, DISCODE, Pn = WPn, Pns = WPnsub, Pnm = WPnosub, Pc = crop_price) %>%
+  gather(type, plotPrice, Pn, Pns, Pnm, Pc) %>%
+  group_by(type) %>%
+  mutate(plotPrice =winsor2(plotPrice)) %>%
+  ungroup() %>% unique
+
+
+# Substitute regional prices when plot level price is not available
+price <- left_join(plotPrice, regPrice) %>%
+          mutate(price = ifelse(is.na(plotPrice), regPrice, plotPrice)) %>%
+          unique() %>% # should not be necessary but never know
+          select(-source, -regPrice, -plotPrice, -product) %>%
+          spread(type, price)
+
+
+# Plot
+ggplot(data = as.data.frame(price), aes(Pc)) + geom_density() + facet_wrap(~ZONE)
+summary(price)
+
+# save data
+saveRDS(price, "Cache/TZA_prices.rds")
+
+

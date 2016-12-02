@@ -1,0 +1,63 @@
+---
+title: "GHA Yield Gap Analysis"
+author: "Michiel van Dijk & Tom Morley"
+output:
+  revealjs::revealjs_presentation:
+    incremental: true
+    theme: moon
+    highlight: zenburn
+    center: true
+    transition: convex
+    reveal_options:
+      slideNumber: true
+
+
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r get_data, echo = FALSE, message = FALSE}
+# Get workspace with all info
+dataPath <- "D:\\Data\\IPOP\\SurveyData\\"
+load("D:\\Data\\Projects\\GHAYG\\Cache/FigTab.Rdata")
+
+library(gridExtra)
+library(dplyr)
+source("D:/Data/Projects/GHAYG/Code/GHAmaps.R")
+```
+
+## Outstanding issues...solved
+
+- Location of plots
+    + GPS file linked
+- Conversion of fertilizer units
+    + Most units (e.g. bucket, maxi bag and American tin) converted with the suport of extension officers
+    + Assumption made that all fertilizer is NPK (15/15/15)
+    + Average use of fertilizer per hectare is in line with other information
+
+## Location of plots
+```{r plot_map}
+grid.arrange(gmap1, gmap3, ncol=2)
+```
+
+## Summary statistics
+
+```{r sum_stat,  results="asis"}
+suppressMessages(library(stargazer))
+stargazer(as.data.frame(dbsum),  type = "html", digits=2, header=FALSE, title = "Summary statistics")
+```
+
+## Frontier yield response model
+```{r sfa}
+knitr::kable(xtable, format = "html", padding = 0, digits = 2)
+```
+
+
+
+## Next steps
+- Add exogenous variables, in particular growth defining factors
+- Try different models
+- Fix prices
+- If possible, add variables that explain the yield gap in second stage analysis
+- Perform yield gap analysis
