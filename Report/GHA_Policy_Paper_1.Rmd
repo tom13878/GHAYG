@@ -1,5 +1,5 @@
 ---
-title: "Ghana Policy Paper Input"
+title: "Increasing food security in Ghana by closing maize yield gaps"
 author: "Michiel van Dijk"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
@@ -36,10 +36,27 @@ source(file.path(root, "Code/Fig_pp.R"))
 
 ```
 
-# Introduction
+# Maize in Ghana
+Maize production and consumption in Ghana
+- Food crop, source of income:  share of maize in agricultural production and share of maize in food consumption. 
+- Yield
+- Use ofinputs?
+
+# Assessing the maize yield gap
+## What are yield gaps?
+
+## How big is the maize yield gap in Ghana?
+
+## Yield gap and food security
+
+# Recommendations
+
+
+# References
+
+
 This document contains some information and data that can be used to compose the first policy paper to raise interest for the yield gap analysis in Ghana as part of the DFID funded IMAGINE project. In my view we could interest people for our project using the following reasoning:
 
-- We argue that maize is an import food crop in Ghana as well as a source of income for small-scale farmers. We would need data to back this up, for instance share of maize in agricultural production and share of maize in food consumption. 
 - In line with global studies [e.g. @Alexandratos2012; @Ray2013], we stress that maize yields are very low at the moment  and the yield gap is very large 
 - We argue that taken into account present yield levels and yield gap, closing the yield gap has certain consequences for food security/self-sufficiency (supported by data from Martin's PNAS paper).
 - We might add that this project uses local (X and X region) and national (micro-household survey analysis) to: (1) better map maize yield gaps, (2) identifies causes, (3) collaborates with farmers to improve crop management by means of demonstrations and (4) provides policy recommendations to improve maize yield.
