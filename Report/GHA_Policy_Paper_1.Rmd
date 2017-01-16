@@ -35,7 +35,7 @@ To support this reasoning we can use the following information:
 
 ```{r get_data, echo = FALSE, message = FALSE}
 # Get workspace with all info
-load("D:\\Data\\Github\\GHAYG\\Cache/FigTab.Rdata")
+load(file.path(root, "Cache/FigTab.Rdata"))
 
 library(gridExtra)
 library(dplyr)
