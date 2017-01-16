@@ -12,7 +12,28 @@ bibliography: ../Common/GHAYG.bib
 ```{r setup, include=FALSE}
 library(rprojroot)
 root <- find_root(is_rstudio_project)
-knitr::opts_chunk$set(echo = FALSE, fig.height = 10, fig.width = 10)
+
+library(knitr)
+knitr::opts_chunk$set(
+  fig.width=10, fig.height=10,
+  dpi = 300,
+  echo=FALSE, warning=FALSE, message=FALSE,
+  fig.path = file.path(root,"FigTabMap/out-"),
+  dev = "CairoPNG",
+  dev.args = list(CairoPNG = list(bg = "transparent"))
+  )
+
+library(pander)
+panderOptions('table.alignment.default', function(df)
+    ifelse(sapply(df, is.numeric), 'right', 'left'))
+panderOptions('table.split.table', Inf)
+panderOptions('big.mark', ",")
+panderOptions('keep.trailing.zeros', TRUE)
+
+source(file.path(root, "Code/Fig_pp.R"))
+#source(file.path(root, "Code/Tab.R"))
+#source(file.path(root, "Code/Map.R"))
+
 ```
 
 # Introduction
@@ -39,6 +60,11 @@ load("D:\\Data\\Github\\GHAYG\\Cache/FigTab.Rdata")
 
 library(gridExtra)
 library(dplyr)
+```
+
+
+```{r Fig_maize_yield}
+Fig_maize_yield
 ```
 
 
