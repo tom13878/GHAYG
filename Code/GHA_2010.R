@@ -14,9 +14,11 @@ library(sjmisc)
 options(scipen=999)
 
 # setWD
-wd <- "D:\\Data\\Github\\GHAYG"
+# wd <- "D:\\Data\\Github\\GHAYG"
+wd <- "C:/Users/morle001/WEcR/GHAYG"
 setwd((wd))
-dataPath <- "C:\\Users\\dijk158\\OneDrive - IIASA\\SurveyData\\GHA\\2010"
+#dataPath <- "C:\\Users\\dijk158\\OneDrive - IIASA\\SurveyData\\GHA\\2010"
+dataPath <- "N:/Internationaal Beleid  (IB)/Projecten/2285000066 Africa Maize Yield Gap/SurveyData/GHA/2010"
 
 #######################################
 ############## LOCATION ###############
