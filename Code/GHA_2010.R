@@ -14,9 +14,9 @@ library(sjmisc)
 options(scipen=999)
 
 # setWD
-wd <- "D:\\Data\\Projects\\GHAYG"
+wd <- "D:\\Data\\Github\\GHAYG"
 setwd((wd))
-dataPath <- "N:\\Internationaal Beleid  (IB)\\Projecten\\2285000066 Africa Maize Yield Gap\\SurveyData\\GHA\\2010"
+dataPath <- "C:\\Users\\dijk158\\OneDrive - IIASA\\SurveyData\\GHA\\2010"
 
 #######################################
 ############## LOCATION ###############
@@ -165,8 +165,6 @@ oput_maj_mze <- left_join(oput_maj_mze, select(aux_mze, unit, kilo_bar))
 oput_maj_mze <- mutate(oput_maj_mze, crop_qty_harv = crop_qty_harv *  kilo_bar)
 
 
-value = rowSums(cbind(value_c, value_p), na.rm=TRUE),
-
 # get rid of the unit variable and NA values for maize quantity
 oput_maj_mze <- select(oput_maj_mze, -unit, -kilo_bar)
 oput_maj_mze <- oput_maj_mze[!is.na(oput_maj_mze$crop_qty_harv) & !oput_maj_mze$crop_qty_harv %in% 0,]
@@ -232,7 +230,8 @@ chem_maj_tot <- chem_maj_tot %>%
 # make factors of important variables
 chem_maj_tot <- chem_maj_tot[!is.na(chem_maj_tot$type), ]
 chem_maj_tot$type <- factor(as_factor(chem_maj_tot$type))
-newnames <- c("manure", "inorg", "herbicide", "insecticide", "fungicide")
+newnames <- c("manure", "inorg", "herbicide", "insecticide", "fungicide", NA)
+# CHECK there is level '6' so NA added.
 levels(chem_maj_tot$type) <- newnames
 chem_maj_tot$unit <- as.integer(chem_maj_tot$unit)
 chem_maj_tot$unit_sub <- as.integer(chem_maj_tot$unit_sub)
@@ -256,10 +255,10 @@ chem_maj_tot <- filter(chem_maj_tot, !is.na(plotno),
 
 # read in external file with the correct units
 # corresponding to each unit code. 
-contain_units <- read.csv(file.path(dataPath, "../Other/container_unitsGHA.csv"))
+contain_units <- read.csv(file.path(dataPath, "../../Other/Conversion/GHA/container_units_GHA.csv"))
 
 # convert fertilizer to kilograms using conversions from extension officers
-conv_fertunit <- read.csv(file.path(paste0(dataPath,"/../../"), "Other/Fertilizer/Fert_GHA.csv")) %>%
+conv_fertunit <- read.csv(file.path(dataPath, "../../Other/Conversion/GHA/Fert_GHA.csv")) %>%
   select(-note)
 
 # Prepare data for each type of chemical
@@ -273,7 +272,7 @@ fert <- filter(chem_maj_tot, type == "inorg") %>%
   left_join(., conv_fertunit) %>%
   mutate(qty_tot = qty_tot*fert_conv) %>%
   select(-fert_conv, -unit_name, -unit) %>%
-  rename(unit = unit_sub) %>%
+  dplyr::rename(unit = unit_sub) %>%
   left_join(., contain_units) %>%
   left_join(., conv_fertunit) %>%
   mutate(qty_sub = qty_sub*fert_conv) %>%
