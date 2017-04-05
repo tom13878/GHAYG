@@ -29,6 +29,7 @@ library(moments)
 library(AER)
 
 wdPath <- "D:\\Data\\Projects\\GHAYG"
+wdPath <- "C:/Users/morle001/WEcR/GHAYG"
 setwd(wdPath)
 
 source("Code/winsor.r")

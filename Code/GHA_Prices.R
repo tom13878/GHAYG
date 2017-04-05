@@ -9,17 +9,21 @@
 ############## READ DATA ##############
 #######################################
 
-source("D:/Data/Projects/GHAYG/Code/GHA_2010.r")
+# source("D:/Data/Projects/GHAYG/Code/GHA_2010.r")
+source("C:/Users/morle001/WEcR/GHAYG/Code/GHA_2010.r")
 
 
 #######################################
 ############## PACKAGES ETC ###########
 #######################################
 
-wdPath <- "D:\\Data\\Projects\\GHAYG"
+# wdPath <- "D:\\Data\\Projects\\GHAYG"
+wd <- "C:/Users/morle001/WEcR/GHAYG"
 setwd(wdPath)
 
-surveyPath <- "N:\\Internationaal Beleid  (IB)\\Projecten\\2285000066 Africa Maize Yield Gap\\SurveyData"
+#surveyPath <- "N:\\Internationaal Beleid  (IB)\\Projecten\\2285000066 Africa Maize Yield Gap\\SurveyData"
+surveyPath <- "C:/Users/morle001/WEcR/GHA"
+
 
 library(dplyr)
 library(ggplot2)
@@ -94,7 +98,8 @@ chem_maj_tot <- chem_maj_tot %>%
 # make factors of important variables
 chem_maj_tot <- chem_maj_tot[!is.na(chem_maj_tot$type), ]
 chem_maj_tot$type <- factor(as_factor(chem_maj_tot$type))
-newnames <- c("manure", "inorg", "herbicide", "insecticide", "fungicide")
+newnames <- c("manure", "inorg", "herbicide", "insecticide", "fungicide", NA)
+# CHECK there is level '6' so NA added.
 levels(chem_maj_tot$type) <- newnames
 chem_maj_tot$unit <- as.integer(chem_maj_tot$unit)
 chem_maj_tot$unit_sub <- as.integer(chem_maj_tot$unit_sub)
@@ -365,6 +370,6 @@ ggplot(data = as.data.frame(price), aes(Pc)) + geom_density() + facet_wrap(~ZONE
 summary(price)
 
 # save data
-saveRDS(price, "Cache/TZA_prices.rds")
+saveRDS(price, "Cache/Prices_GHA.rds")
 
 
