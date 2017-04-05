@@ -14,9 +14,11 @@ library(sjmisc)
 options(scipen=999)
 
 # setWD
-wd <- "D:\\Data\\Github\\GHAYG"
+# wd <- "D:\\Data\\Github\\GHAYG"
+wd <- "C:/Users/morle001/WEcR/GHAYG"
 setwd((wd))
-dataPath <- "C:\\Users\\dijk158\\OneDrive - IIASA\\SurveyData\\GHA\\2010"
+#dataPath <- "C:\\Users\\dijk158\\OneDrive - IIASA\\SurveyData\\GHA\\2010"
+dataPath <- "C:/Users/morle001/WEcR/GHA/2010"
 
 #######################################
 ############## LOCATION ###############
@@ -600,6 +602,6 @@ GHA2010 <- GHA2010 %>% rename(hhid = hhno)
 rm(list=ls()[!ls() %in% c("GHA2010", "dataPath")])
 
 # Save file
-saveRDS(GHA2010, "D:/Data/Projects/GHAYG/Cache/GHA2010.rds")
+saveRDS(GHA2010, "Cache/GHA2010.rds")
 
 
