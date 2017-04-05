@@ -5,25 +5,31 @@
 # CHECK Compare prices with other prices and check if they are realistic!
 
 
+### PACKAGES
+library(pacman)
+p_load(char=c("plyr", "dplyr", "haven", "rprojroot", "sjmisc", "tidyr"), install=TRUE)
+
+
 #######################################
 ############## READ DATA ##############
 #######################################
 
-# source("D:/Data/Projects/GHAYG/Code/GHA_2010.r")
-source("C:/Users/morle001/WEcR/GHAYG/Code/GHA_2010.r")
+source("Code/GHA_2010.r")
+
+
+### SETWD
+root <- find_root(is_rstudio_project)
+setwd(root)
+
+
+### SOURCE
+source(file.path(root, "Code/get_dataPath.r"))
+source(file.path(root, "Code/winsor.R"))
 
 
 #######################################
 ############## PACKAGES ETC ###########
 #######################################
-
-# wdPath <- "D:\\Data\\Projects\\GHAYG"
-wd <- "C:/Users/morle001/WEcR/GHAYG"
-setwd(wdPath)
-
-#surveyPath <- "N:\\Internationaal Beleid  (IB)\\Projecten\\2285000066 Africa Maize Yield Gap\\SurveyData"
-surveyPath <- "C:/Users/morle001/WEcR/GHA"
-
 
 library(dplyr)
 library(ggplot2)
@@ -38,8 +44,6 @@ library(assertive)
 
 options(scipen=999)
 
-# winsor code
-source("Code/winsor.R")
 
 
 #######################################
@@ -126,8 +130,9 @@ chem_maj_tot <- filter(chem_maj_tot, !is.na(plotno),
 contain_units <- read.csv(file.path(dataPath, "../Other/container_unitsGHA.csv"))
 
 # convert fertilizer to kilograms using conversions from extension officers
-conv_fertunit <- read.csv(file.path(paste0(dataPath,"/../../"), "Other/Fertilizer/Fert_GHA.csv")) %>%
+conv_fertunit <- read.csv(file.path(dataPath, "../../Other/Conversion/GHA/Fert_GHA.csv")) %>%
   select(-note)
+
 
 # fertilizer
 # Compute subsidised and market prices for inputs averaged over hhno, plotno, crop and chem
@@ -138,7 +143,7 @@ fert <- filter(chem_maj_tot, type == "inorg") %>%
   left_join(., conv_fertunit) %>%
   mutate(qty_tot = qty_tot*fert_conv) %>%
   select(-fert_conv, -unit_name, -unit) %>%
-  rename(unit = unit_sub) %>%
+  dplyr::rename(unit = unit_sub) %>%
   left_join(., contain_units) %>%
   left_join(., conv_fertunit) %>%
   mutate(qty_sub = qty_sub*fert_conv) %>%

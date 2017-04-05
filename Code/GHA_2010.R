@@ -4,21 +4,22 @@
 
 # ASK TOM ABOUT MINOR SEASON
 
-library(haven)
-library(tidyr)
-library(reshape2)
-library(plyr)
-library(dplyr)
-library(assertive)
-library(sjmisc)
+
+### PACKAGES
+library(pacman)
+p_load(char=c("plyr", "dplyr", "haven", "rprojroot", "sjmisc", "tidyr"), install=TRUE)
+
+### SETWD
+root <- find_root(is_rstudio_project)
+setwd(root)
+
+### SET DATAPATH
+source("Code/get_dataPath.r")
+
+### OPTIONS
 options(scipen=999)
 
-# setWD
-# wd <- "D:\\Data\\Github\\GHAYG"
-wd <- "C:/Users/morle001/WEcR/GHAYG"
-setwd((wd))
-#dataPath <- "C:\\Users\\dijk158\\OneDrive - IIASA\\SurveyData\\GHA\\2010"
-dataPath <- "C:/Users/morle001/WEcR/GHA/2010"
+
 
 #######################################
 ############## LOCATION ###############
@@ -336,7 +337,7 @@ fert <- inf.nan.na.clean.f(fert)
 herb <- filter(chem_maj_tot, type == "herbicide") %>%
   filter(crop == "Maize") %>%
   group_by(hhno, plotno) %>%
-  summarize(qty_tot = sum(qty_tot, na.rm=T)) %>%
+  dplyr::summarize(qty_tot = sum(qty_tot, na.rm=T)) %>%
   mutate(herb = ifelse(qty_tot >0, 1, 0)) %>%
   select(hhno, plotno, herb) %>%
   remove_all_labels()
@@ -345,7 +346,7 @@ herb <- filter(chem_maj_tot, type == "herbicide") %>%
 manure <- filter(chem_maj_tot, type == "manure") %>%
   filter(crop == "Maize") %>%
   group_by(hhno, plotno) %>%
-  summarize(qty_tot = sum(qty_tot, na.rm=T)) %>%
+  dplyr::summarize(qty_tot = sum(qty_tot, na.rm=T)) %>%
   mutate(manure = ifelse(qty_tot > 0, 1, 0)) %>%
   select(hhno, plotno, manure) %>%
   remove_all_labels()
@@ -354,7 +355,7 @@ manure <- filter(chem_maj_tot, type == "manure") %>%
 insec <- filter(chem_maj_tot, type == "insecticide") %>%
   filter(crop == "Maize") %>%
   group_by(hhno, plotno) %>%
-  summarize(qty_tot = sum(qty_tot, na.rm=T)) %>%
+  dplyr::summarize(qty_tot = sum(qty_tot, na.rm=T)) %>%
   mutate(insec = ifelse(qty_tot >0, 1, 0)) %>%
   select(hhno, plotno, insec) %>%
   remove_all_labels()
@@ -363,7 +364,7 @@ insec <- filter(chem_maj_tot, type == "insecticide") %>%
 fung <- filter(chem_maj_tot, type == "fungicide") %>%
   filter(crop == "Maize") %>%
   group_by(hhno, plotno) %>%
-  summarize(qty_tot = sum(qty_tot, na.rm=T)) %>%
+  dplyr::summarize(qty_tot = sum(qty_tot, na.rm=T)) %>%
   mutate(fung = ifelse(qty_tot >0, 1, 0)) %>%
   select(hhno, plotno, fung) %>%
   remove_all_labels()
@@ -505,7 +506,7 @@ lvstk <- ddply(lvstk, .(lvstk), transform,
 
 # calculate per houshold livestock wealth
 lvstk <- group_by(lvstk, hhno) %>%
-        summarise(lvstk_valu=sum(valu))
+        dplyr::summarise(lvstk_valu=sum(valu))
 
 lvstk$hhno <- as.character(lvstk$hhno)
 
@@ -524,7 +525,7 @@ implmt$implmt <- as_factor(implmt$implmt)
 
 implmt <- filter(implmt, !is.na(valu)) %>%
         group_by(hhno) %>% 
-        summarise(implmt_valu=sum(valu))
+        dplyr::summarise(implmt_valu=sum(valu))
 
 implmt$hhno <- as.character(implmt$hhno)
 

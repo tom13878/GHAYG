@@ -14,23 +14,10 @@
 ############## PACKAGES ETC ###########
 #######################################
 
-library(dplyr)
-library(stargazer)
-library(broom)
-library(DescTools)
-library(ggplot2)
-library(xtable)
-library(frontier)
-library(moments)
-library(tidyr)
-library(openxlsx)
-library(frontier)
-library(moments)
-library(AER)
-
-wdPath <- "D:\\Data\\Projects\\GHAYG"
-wdPath <- "C:/Users/morle001/WEcR/GHAYG"
-setwd(wdPath)
+library(pacman)
+p_load(char=c("dplyr", "rprojroot", "stargazer", "frontier", "moments", "AER"), install=TRUE)
+root <- find_root(is_rstudio_project)
+setwd(root)
 
 source("Code/winsor.r")
 options(scipen=999)
