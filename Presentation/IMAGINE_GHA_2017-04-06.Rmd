@@ -1,0 +1,108 @@
+---
+title: "Ghana Yield Gap Analysis"
+author: "Michiel van Dijk & Tom Morley"
+date: "10 April 2017"
+output: beamer_presentation
+root.dir: "C:/users/morle001/WEcR/GHAYG"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(pander)
+```
+
+```{r get_data, echo = FALSE, message = FALSE}
+# Get workspace with all info
+root <- "C:/users/morle001/WEcR/GHAYG"
+source(file.path(root, "Code/GHA_fig.R"))
+```
+
+## Recommendations
+
+- Largest yield gap is the technical yield gap, followed by the economic, allocative and technical efficiency yield gaps.
+
+- Policies that close the allocative or economic yield gaps are very important. For example, subsidy programs which lower the cost of nitrogen will help to close the allocative yield gap.
+
+- Determinants of inefficiency (still to come).
+
+## Outline of analysis
+
+- Working within the yield gap decomposition framework. 
+- Stochastic frontiers analysis.
+- So far only a Cobb Douglas production function.
+- Limited to simpler models somewhat by the quality of the data.
+
+## Data
+
+- Main data source is the EGC-ISSER Ghana Panel Survey.
+- One year of data covering 2009-10.
+- We focus only on the major season as input use is low in the minor season.
+- We find the quality of the data to be lower than the LSMS-ISA surveys. in general, and this results in a simpler analysis than Ethiopia.
+
+## Summary statistics
+
+\small
+```{r echo=FALSE}
+pander(readRDS(file.path(root, "Cache/sum_tab_res.rds")))
+```
+\normalsize
+
+## Method
+
+- Cobb Douglas production curve 
+- We may experiment with more complicated production functions but initial results are not promising.
+- Decomposition of the yield gap
+
+## Frontier yield response model
+
+\small
+```{r echo=FALSE}
+pander(readRDS(file.path(root, "Cache/CD_sf_res.rds")))
+```
+\normalsize
+
+## Yield gaps by zone
+
+\small 
+```{r relative_YG}
+ZonalYieldGap_l_sh <- ZonalYieldGap_l_sh %>%
+  rename(FYG = EUYG)
+names(ZonalYieldGap_l_sh) <- c("ZONE" ,"TEYG", "AYG", "EYG", "TYG", "YG")
+knitr::kable(ZonalYieldGap_l_sh, caption = "Relative yield gap", digits = 0)
+```
+\normalsize
+
+## National Yield gap decomposition
+
+```{r Gap}
+Fig_waterfall
+```
+
+## Economic yield assumptions
+
+- Nitrogen capped at 200 kg/ha - link to nutrient gap project?
+- Assets increased by 50% - is this reasonable?
+- labour increased by 50% - is this reasonable?
+- All farmers assumed to use herbicide
+- All farmers assumed to use some form of mechanization in production process (tractor etc.)
+- Other suggestions?
+- Still to incorporate the GYGA variables in the analysis. This includes water-limited potential yield. Currently Pw = 15229 for all of Ghana!
+
+## Next steps
+
+- Add exogenous determinants of technical inefficiency. Policy implications.
+- Calculate the marginal effects of exogenous determinants of technical inefficiency.
+- Add the GYGA variables to control for growing conditions.
+- Experiment with other functional forms - limited success so far.
+- Endogeneity and heterogeneity? Data does not appear to be of sufficient quality to bear advanced techniques.
+
+## Recommendations/Conclusions
+
+- Smallholder farmers report very small yields compared to other countries e.g. Ethiopia, median is 466 kg/ha, consequently the frontier yield is also low 600 kg/ha.
+
+- Largest yield gap is the technical yield gap, followed by the economic, allocative and technical efficiency yield gaps.
+
+- Mean efficiency = 0.43
+
+- Policies that close the allocative or economic yield gaps are very important. For example, subsidy programs which lower the cost of nitrogen will help to close the allocative yield gap.
+- Determinants of inefficiency (still to come).
