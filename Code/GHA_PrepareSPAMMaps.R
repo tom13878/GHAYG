@@ -15,7 +15,8 @@ lapply(AdditionalPackages, library, character.only = TRUE)
 
 
 # SET WORKING DIRECTORY
-wdPath <- "D:\\Data\\IPOP\\SPAM\\"
+#wdPath <- "D:\\Data\\IPOP\\SPAM\\"
+wdPath <- "D:/Data/IPOP/SPAM"
 setwd(wdPath)
 
 # R SETTINGS

@@ -18,6 +18,7 @@ library(pacman)
 p_load(char=c("dplyr", "rprojroot", "stargazer", "frontier", "moments", "AER"), install=TRUE)
 root <- find_root(is_rstudio_project)
 setwd(root)
+setwd("c:/users/morle001/WEcR/GHAYG")
 
 source("Code/winsor.r")
 options(scipen=999)
@@ -204,6 +205,28 @@ db1 <- left_join(db0, Prices) %>%
 
 # Drop unused levels (e.g. Zanzibar in zone), which are giving problems with sfa
 db1 <- droplevels(db1)
+db1$yesN <- ifelse(db1$N > 0, 1, 0)
+
+# summary stats table
+# make a summary tab of variables for paper
+sum_dat <- select(db1, yld, N, area, lab, asset,
+                  herb, mech, elevation, SOC2,
+                  phdum2, yesN)
+
+
+Mean <- colMeans(sum_dat, na.rm=TRUE)
+Median <- apply(sum_dat, 2, function(col) median(col, na.rm=TRUE))
+SD <- apply(sum_dat, 2, function(col) sd(col, na.rm=TRUE))
+Skewness <- apply(sum_dat, 2, function(col) skewness(col, na.rm=TRUE))
+Min <- apply(sum_dat, 2, function(col) min(col, na.rm=TRUE))
+Max <- apply(sum_dat, 2, function(col) max(col, na.rm=TRUE))
+sum_tab <- data.frame(Variable=colnames(sum_dat),
+                      Mean, Median, SD, Skewness,
+                      Min, Max)
+sum_tab[, -1] <- round(sum_tab[,-1], 3)
+row.names(sum_tab) <- NULL
+
+saveRDS(sum_tab, "C:/users/morle001/WEcR/GHAYG/Cache/sum_tab_res.rds")
 
 # ANALYSIS
 # run the model
@@ -220,6 +243,10 @@ TL <- sfa(logyld ~ logN + loglab + logasset +
                 SOC2  + phdum2, data=db1)
 
 lrtest(TL, CD) # TL model fits better so we proceed with this
+
+# table of results
+sf_tab <- round(as.data.frame(summary(CD)$mleParam), 3)
+saveRDS(sf_tab, "Cache/CD_sf_res.rds")
 
 # we want to evaluate the frontier function
 # and avoid the Z variables
