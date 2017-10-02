@@ -33,65 +33,48 @@ options(digits=4)
 
 # Load and process data
 maize <- read.csv(file.path(root, "Data/FAOSTAT_data_1-24-2017_maize.csv"))
+maize_con <- read.csv(file.path(root, "Data/FAOSTAT_data_3-21-2017_maize_continents.csv"))
 land <- read.csv(file.path(root, "Data/FAOSTAT_data_1-24-2017_land.csv"))
 maize$Area <- as.character(maize$Area)
 
-# Ethiopia was Ethiopia PDR
-maize$Area <- ifelse(maize$Area %in% "Ethiopia PDR", "Ethiopia", maize$Area)
-land$Area <- ifelse(land$Area %in% "Ethiopia PDR", "Ethiopia", land$Area)
-
 # select only maize yield and create table
 # hectograms are 0.1 kilograms -> convert
-maize_yield <- dplyr::select(maize, country=Area, variable = Element,
-                             year=Year, value = Value) %>%
-  filter(variable=="Yield")
-maize_yield$value <- maize_yield$value * 0.1
+maize <- dplyr::select(maize, country=Area, variable = Element,
+                       year=Year, value = Value) %>%
+  filter(variable=="Yield", country == "Ghana") %>%
+  mutate(value = value*0.1)
 
-maize_yield$region <- countrycode(maize_yield$country, "country.name", "region")
-maize_yield$continent <- countrycode(maize_yield$country, "country.name", "continent")
+maize_con <- dplyr::select(maize_con, country=Area, variable = Element,
+                           year=Year, value = Value) %>%
+  filter(variable=="Yield") %>%
+  mutate(value = value*0.1)
 
-# note that the region and continent cannot be found
-# for several countries due to the names being obsolete
-# or strange. None of these are likely to affect
-# the results
-unique(maize_yield$country[is.na(maize_yield$region)])
+Fig_maize_yield_df <- bind_rows(maize_con, maize) 
 
-# Calculate averages of interesting countries
-# continents and regions to compare with Ghana
-# and Ethiopia
-
-maize_reg <- maize_yield %>%
-  group_by(region, year) %>%
-  summarize (value = mean(value, na.rm=T)) %>%
-  filter(region %in% "South America")
-
-maize_con <- maize_yield %>%
-  group_by(continent, year) %>%
-  summarize (value = mean(value, na.rm=T)) %>%
-  rename(region = continent) %>%
-  filter(region %in% c("Asia", "Africa", "Americas"))
-
-maize_iso <- maize_yield %>%
-  filter(country %in% c("Ghana")) %>%
-  dplyr::select(region = country, value, year)
-
-Fig_maize_yield_df <- bind_rows(maize_reg, maize_con, maize_iso) 
-
-Fig_maize_yield <- ggplot(data = Fig_maize_yield_df, aes(x = year, y = value, colour = region)) +
-  geom_line() +
-  #geom_smooth(se = F, size = 2) +
+Fig_maize_yield <- ggplot(data = Fig_maize_yield_df, aes(x = year, y = value, colour = country)) +
+  geom_line(size = 1.2) +
+  #geom_point(size = 2) +
   #theme_bw() +
   labs(x = "",
-       y = "tons/ha",
-       title = "Maize yield by region",
-       caption = "Source: FAOSTAT") +
+       y = "kg/ha",
+       title = "") +
   theme(
     panel.grid.major.x = element_blank() ,
-    panel.grid.major.y = element_line( size=.1, color="grey" ),
+    panel.grid.major.y = element_blank(),
     panel.background = element_blank(),
-    axis.line = element_line(colour = "black")) 
+    axis.line = element_line(colour = "black"),
+    legend.position="bottom") +
+  scale_y_continuous(labels = comma) +
+  scale_x_continuous(breaks = seq(1960, 2015, 10)) +
+  scale_colour_brewer("", palette="Set1") +
+  #scale_shape_discrete("") +
+  #scale_linetype_manual("", values = c("solid", "dotted", "dashed", "dotdash")) +
+  theme(legend.justification=c(0,1), legend.position=c(0.1,0.9)) 
 
 Fig_maize_yield
+ggsave("FigTabMap/Fig_maize_yield.png")
+
+
 
 ### SELF SUFFICIENCY FIGURE
 target_scen <- c("Actual farmers' yield 2010", 
@@ -109,21 +92,26 @@ col = rev(brewer.pal(9,"PuBuGn")[c(3,5,7,9)])
 ss2010 <- round(ss_ratio_raw$ss_ratio[ss_ratio_raw$type == "Line"], 2)
 
 p_ss = ggplot() +
-  theme_classic(16) +
+  theme_classic(10) +
   geom_bar(data = filter(ss_ratio, type == "Bar"), aes(x = type, y = ss_ratio, fill = scenario), colour = "black", stat = "identity", position = "dodge", alpha = 1) +
-  scale_y_continuous(limits = c(0,1.2), expand=c(0,0), breaks = c(seq(0, 1.2, 0.3), 1, ss2010)) +
-  scale_fill_manual(values = col) +
+  scale_y_continuous(limits = c(0,1.2), expand=c(0,0), breaks = c(seq(0, 1.2, 0.2), 1, ss2010)) +
+  #scale_y_continuous(limits = c(0,1), expand=c(0,0), breaks = c(seq(0, 2, 0.5), 1, ss2010)) +
+  #scale_fill_manual(values = col) +
+  scale_fill_brewer(palette="Set1") +
   labs(x = "", y = "Self-sufficiency ratio",
-        title = "Self-sufficiency ratios in 2050") +
+       title = "Self-sufficiency ratios in 2050") +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
         axis.text.y=element_text(colour="black"),
-        plot.title=element_text(size=14, hjust = 0.5)) +
+        plot.title=element_text(size=10, hjust = 0.5)) +
   geom_hline(aes(yintercept = 1), linetype = "dashed") +
   geom_hline(aes(yintercept = ss2010), linetype = "dashed") +
-  annotate("text", 0.55, ss2010+0.02, label = "Self-sufficiency ratio 2010", hjust = 0) +
-  annotate("text", 0.55, 1.02, label = "Self-suffient", hjust = 0) 
+  annotate("text", 0.55, ss2010+0.04, label = "Self-sufficiency ratio 2010", hjust = 0) +
+  annotate("text", 0.55, 1.04, label = "Self-suffient", hjust = 0) 
+
+p_ss 
+
 
 
 # ### AREA FIGURE
@@ -153,9 +141,10 @@ p_ss = ggplot() +
 #     annotate("text", 1.45, aPotential+0.2, label = "Potential available cereal area", hjust = 1) +
 #     annotate("text", 1.45, a2010+0.2, label = "Current cereal area", hjust = 1)  
 
+
 ### YIELD PROJECTIONS
 # Set 2010 value
-yield_gha <- filter(maize_yield, country == "Ghana" & year <= 2010)
+yield_gha <- filter(maize, country == "Ghana" & year <= 2010)
 yield2010 <- yield_gha$value[yield_gha$year == 2010]
 
 # Load projections
@@ -167,24 +156,23 @@ ss_yield <- ss_yield_raw %>%
          yield = ifelse(scenario == "Actual farmers' yield 2010", yield2010, yield)) %>%
   filter(scenario %in% target_scen) 
 
-
-# Create plot
 p_yield_proj <- ggplot() +
-  theme_classic(16) +
-  scale_colour_manual(values = col) +
-  labs(x = "", y = "Maize yield (tons/ha)",
+  theme_classic(10) +
+  #scale_colour_manual(values = col) +
+  scale_colour_brewer(palette="Set1") +
+  labs(x = "", y = "Maize yield (kg/ha)",
        title = "Historical maize yield and scenarios") +
   theme(axis.title.x=element_blank(),
-        #axis.text.x=element_blank(),
+        axis.text.x=element_text(colour="black"),
         #axis.ticks.x=element_blank(),
         axis.text.y=element_text(colour="black"),
-        plot.title=element_text(size=14, hjust = 0.5)) +
+        plot.title=element_text(size=10, hjust = 0.5)) +
   scale_y_continuous(labels = comma) +
-  geom_line(data = yield_gha, aes(x = year, y = value), size = 1.5) + 
-  geom_point(data = ss_yield, aes(x = year, y = yield, colour = scenario)) +
+  geom_line(data = yield_gha, aes(x = year, y = value), size = 1.2) + 
+  #geom_point(data = ss_yield, aes(x = year, y = yield, colour = scenario)) +
   geom_segment(data = ss_yield, aes(x = 2010, y = yield2010, 
-                                    xend = year, yend = yield, linetype = scenario,
-                                    colour = scenario), size = 1.5) +
+                                    xend = year, yend = yield, colour = scenario,
+                                    linetype = scenario), size = 1.2) +
   theme(legend.justification = c(0,1), legend.position = c(0,1))
 
 p_yield_proj
@@ -198,6 +186,7 @@ legend <- get_legend(p_ss + theme(legend.position="bottom") +
 
 Fig_ss_a <- plot_grid(p_tot, legend, ncol = 1, rel_heights = c(1, .2))
 Fig_ss_a
+ggsave("FigTabMap/Fig_ss_a.png", Fig_ss_a, dpi = 600)
 
 
 
