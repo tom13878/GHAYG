@@ -20,7 +20,6 @@ source("Code/get_dataPath.r")
 options(scipen=999)
 
 
-
 #######################################
 ############## LOCATION ###############
 #######################################
@@ -102,7 +101,7 @@ oput_maj_tot$disease <- as_factor(oput_maj_tot$disease)
 # and whether or not a legume was grown on that plot
 
 oput_maj_tot <- ddply(oput_maj_tot, .(hhno, plotno), transform,
-                      crop_count=length(crop[!is.na(crop)]),
+                      crop_count=length(crop[!crop %in% "NaN"]),
                       legume=ifelse(any(crop %in% "Beans/Peas"), 1, 0))
 
 # select only maize oput and chosen variables
@@ -117,7 +116,6 @@ oput_maj_mze$crop4 <- ifelse(oput_maj_mze$crop_count %in% 4, 1, 0)
 oput_maj_mze$crop5 <- ifelse(oput_maj_mze$crop_count %in% 5, 1, 0)
 
 oput_maj_mze <- remove_all_labels(oput_maj_mze)
-
 
 rm(list=c("oput_maj_tot", "oput_maj"))
 
@@ -135,43 +133,39 @@ rm(list=c("oput_maj_tot", "oput_maj"))
 # variation in units across communities.
 # -------------------------------------
 
+# first, some conversions are really rare and
+# we lose only a handful of observations by
+# ignoring them.
+keep <- c(2, 4, 6, 18, 19, 29)
+oput_maj_mze <- oput_maj_mze[oput_maj_mze$unit %in% keep, ]
+
 # convert to kilograms using conversions in sec 5A of
 # rural community questionnaire
-
 SEC5A <- read_dta(file.path(dataPath, "RURAL/SEC 5A.dta"))
+SEC5A <- select(SEC5A, reg, EA_No, commcode, crop_code = s5, s5a_1, s5a_a,
+                s5a_c, s5a_d, s5a_f, s5a_o, s5a_p) %>%
+  filter(crop_code %in% 19)
 
-# construct an auxillary conversion table
-aux <- gather(SEC5A, variable, value, s5a_a:s5a_w)
-aux <- aux[!is.na(aux$value),]
-aux <- ddply(aux, .(s5a_1, variable), summarize, kilo_bar = mean(value, na.rm=TRUE))
-
-
-# CHECK: value_p not used?! And maize price x1- too high
-
-# Add unit codes by hand from BID
-variable <- as.character(unique(aux$variable))[order(as.character(unique(aux$variable)))]
-unit <- c(2, 27, 4, 6, 7, 29, 8, 9, 11, 12, 14, 17, 18, 19, 34, 37, 23, 24, 26)
-cnvrt <- data.frame(variable, unit)
-
-# join conversion table with unit table
-aux <- left_join(aux, cnvrt)
-aux_mze <- filter(aux, s5a_1 %in% "MAIZE")
-
-# join unit table with maize output. 
-# For goods other than maize this
-# conversions are difficult because of spelling
-# mistakes
-
-oput_maj_mze <- left_join(oput_maj_mze, select(aux_mze, unit, kilo_bar))
+# lots and lots of missing values in the market
+# conversions, so we take as conversions the
+# this is not ideal
+oput_maj_mze$conv <- NA
+oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 2, mean(SEC5A$s5a_a, na.rm=TRUE), oput_maj_mze$conv)
+oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 4, mean(SEC5A$s5a_c, na.rm=TRUE), oput_maj_mze$conv)
+oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 6, mean(SEC5A$s5a_d, na.rm=TRUE), oput_maj_mze$conv)
+oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 18, mean(SEC5A$s5a_o, na.rm=TRUE), oput_maj_mze$conv)
+oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 19, mean(SEC5A$s5a_p, na.rm=TRUE), oput_maj_mze$conv)
+oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 29, mean(SEC5A$s5a_f, na.rm=TRUE), oput_maj_mze$conv)
 
 # calculate quantity in kilograms
-oput_maj_mze <- mutate(oput_maj_mze, crop_qty_harv = crop_qty_harv *  kilo_bar)
+oput_maj_mze <- mutate(oput_maj_mze, 
+                       crop_qty_harv = crop_qty_harv *  conv)
 
 
 # get rid of the unit variable and NA values for maize quantity
-oput_maj_mze <- select(oput_maj_mze, -unit, -kilo_bar)
+oput_maj_mze <- select(oput_maj_mze, -unit)
 oput_maj_mze <- oput_maj_mze[!is.na(oput_maj_mze$crop_qty_harv) & !oput_maj_mze$crop_qty_harv %in% 0,]
-oput_maj_mze$crop_price <- oput_maj_mze$crop_qty_harv/oput_maj_mze$value_c
+oput_maj_mze$crop_price <- oput_maj_mze$value_c/oput_maj_mze$crop_qty_harv
 oput_maj_mze <- select(oput_maj_mze, -value_c)
 
 oput_maj_mze$hhno <- as.character(oput_maj_mze$hhno)

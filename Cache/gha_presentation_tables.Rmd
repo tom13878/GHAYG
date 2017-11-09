@@ -1,0 +1,89 @@
+---
+title: "ghana presentation tables"
+author: "Tomas Morley"
+date: "20 april 2017"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+## table 1
+
+% Table created by stargazer v.5.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
+% Date and time: zo, apr 23, 2017 - 16:15:55
+\begin{table}[!htbp] \centering 
+  \caption{} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} ccccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & ZONE & n & Yield & Yf & Ynf & PY \\ 
+\hline \\[-1.8ex] 
+1 & ASHANTI & 181 & 748 & 840 & 741 & 9154 \\ 
+2 & BRONG AHAFO & 139 & 671 & 1161 & 653 & 7906 \\ 
+3 & CENTRAL & 90 & 824 & 1494 & 776 & 9299 \\ 
+4 & EASTERN & 150 & 806 & 1512 & 550 & 9012 \\ 
+5 & GREATER ACCRA & 17 & 586 & 642 & 579 & 7924 \\ 
+6 & NORTHERN & 346 & 720 & 985 & 606 & 7804 \\ 
+7 & UPPER EAST & 40 & 616 & 689 & 518 & 8006 \\ 
+8 & UPPER WEST & 100 & 466 & 711 & 451 & 8103 \\ 
+9 & VOLTA & 152 & 786 & 1106 & 764 & 8305 \\ 
+10 & WESTERN & 11 & 602 & NaN & 602 & 11107 \\ 
+11 & Total & 1226 & 718 & 1058 & 648 & 8397 \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table}
+
+# table 2:
+
+% Table created by stargazer v.5.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
+% Date and time: zo, apr 23, 2017 - 16:15:55
+\begin{table}[!htbp] \centering 
+  \caption{} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} cccccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & ZONE & n & nitrogen & n1 & n2 & area & crops \\ 
+\hline \\[-1.8ex] 
+1 & ASHANTI & 181 & 7 & 0.94 & 13.13 & 1.98 & 2.97 \\ 
+2 & BRONG AHAFO & 139 & 4 & 2.27 & 63.01 & 1.62 & 2.84 \\ 
+3 & CENTRAL & 90 & 7 & 0.69 & 10.35 & 0.91 & 2.86 \\ 
+4 & EASTERN & 150 & 27 & 7.63 & 28.63 & 1.26 & 2.03 \\ 
+5 & GREATER ACCRA & 17 & 12 & 2.27 & 19.33 & 1.21 & 2.24 \\ 
+6 & NORTHERN & 346 & 30 & 6.45 & 21.46 & 1.5 & 1.97 \\ 
+7 & UPPER EAST & 40 & 57 & 19.73 & 34.31 & 1.41 & 2.55 \\ 
+8 & UPPER WEST & 100 & 6 & 1.08 & 18.02 & 1.62 & 3.02 \\ 
+9 & VOLTA & 152 & 7 & 2.15 & 32.73 & 0.96 & 1.95 \\ 
+10 & WESTERN & 11 & 0 & 0 & NaN & 1.18 & 4.82 \\ 
+11 & Total & 1226 & 17 & 4.23 & 24.82 & 1.44 & 2.42 \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table}
+
+# table 3
+
+% Table created by stargazer v.5.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
+% Date and time: zo, apr 23, 2017 - 16:17:40
+\begin{table}[!htbp] \centering 
+  \caption{} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} ccccccccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & ZONE & n & nitrogen & N & Npm & MPP & Pn & Pm & relprice & MVCR \\ 
+\hline \\[-1.8ex] 
+1 & ASHANTI & 181 & 7 & 13.13 & 80.69 & 15.2 & 0.57 & 0.35 & 2.44 & 6.23 \\ 
+2 & BRONG AHAFO & 139 & 4 & 63.01 & 39.45 & 4.33 & 1.05 & 0.32 & 4.08 & 1.06 \\ 
+3 & CENTRAL & 90 & 7 & 10.35 & 17.42 & 19.55 & 3.1 & 0.33 & 11.56 & 1.69 \\ 
+4 & EASTERN & 150 & 27 & 28.63 & 45.61 & 12.17 & 1.42 & 0.39 & 4.37 & 2.79 \\ 
+5 & GREATER ACCRA & 17 & 12 & 19.33 & 13.41 & 5.06 & 3.47 & 0.46 & 8.64 & 0.59 \\ 
+6 & NORTHERN & 346 & 30 & 21.46 & 33.94 & 11.77 & 1.12 & 0.24 & 4.96 & 2.37 \\ 
+7 & UPPER EAST & 40 & 57 & 34.31 & 32.92 & 5.3 & 1.51 & 0.3 & 5.12 & 1.04 \\ 
+8 & UPPER WEST & 100 & 6 & 18.02 & 25.53 & 9.76 & 1.11 & 0.32 & 3.8 & 2.57 \\ 
+9 & VOLTA & 152 & 7 & 32.73 & 44.97 & 11.58 & 1.37 & 0.34 & 4.52 & 2.56 \\ 
+10 & WESTERN & 11 & 0 & NaN & 52.16 & NaN & 1 & 0.4 & 4.01 & NaN \\ 
+11 & Total & 1226 & 17 & 24.82 & 42.21 & 11.1 & 1.28 & 0.32 & 4.79 & 2.32 \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table}

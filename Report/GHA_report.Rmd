@@ -1,0 +1,135 @@
+---
+title: "Ghana Yield Gap Analysis Report"
+author: "Tomas Morley, Michiel van Dijk"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+# Knitr settings
+library(rprojroot)
+library(dplyr)
+root <- find_root(is_rstudio_project)
+
+library(frontier)
+library(readxl)
+library(knitr)
+library(gridExtra)
+knitr::opts_chunk$set(
+  fig.width=12, fig.height=8,
+  dpi = 300,
+  echo=FALSE, warning=FALSE, message=FALSE,
+  fig.path = file.path(root,"FigTabMap/out-"),
+  dev = "CairoPNG",
+  dev.args = list(CairoPNG = list(bg = "transparent"))
+  )
+
+library(pander)
+panderOptions('table.alignment.default', function(df)
+    ifelse(sapply(df, is.numeric), 'right', 'left'))
+panderOptions('table.split.table', Inf)
+panderOptions('big.mark', ",")
+panderOptions('keep.trailing.zeros', TRUE)
+
+#source(file.path(root, "Code/maize_panel_prep4analysis.R"))
+source(file.path(root, "Analysis/summary_statistics.R"))
+
+
+# Source figures, tables and maps
+source(file.path(root,"analysis/yield_gap_figure_GHA.R"))
+#detach(package:dplyr)
+#library(dplyr)
+#source(file.path(root, "analysis/maize_yields_ETH.R"))
+#source(file.path(root, "analysis/ETH_fig_sim.R"))
+# source(file.path(root, "Code/ETH_tab.R"))
+#source(file.path(root, "analysis/ETH_map.R"))
+```
+# Introduction
+
+This report describes the data and results from the national level analysis of Ghana. Particular attention is given to the difficulties experienced when constructing and handling the Ghana data. The methodology used is the same as for the decomposition of the maize yield gap in Ethiopia and Nigeria, with the exception that we use a Cobb Douglas rather than translog production function. The methodology is not described in this report.
+
+# Data and Data Issues
+
+The main data source for this report is the EGC-ISSER Ghana Panel Survey Economic Growth Center (EGC) at Yale University and the Institute of Statistical, Social, and Economic Research (ISSER) at the University of Ghana, Legon. Currently, only the first wave of the survey is available for use and covers the 6-month period November 2009 to April 2010. The EGC-ISSER covers information on agricultural production, inputs and land area measurements. However, unlike the LSMS-ISA datasets, the EGC-ISSER is not specifically focused on agriculture.
+
+Table 1 presents summary statistics for key variables used to decompose the maize yield gap in Ghana. Reported maize yields are far lower than other sources. For example, Faostat records maize yields in Ghana of 1887 kg/ha in 2010, while a 2013 survey of medium and large-scale farmers conducted by IFPRI reports average maize yields ranging from 770 kg/ha to 2340 kg/ha depending on the type of fertilizer and seed used. In the EGC-ISSER we find a mean yield of 702 kg/ha, although this is buoyed by a small number of larger yield values (the median is 483 kg/ha), see figure 1 bottom right panel.
+
+**Table 1: Descriptive Statistics**
+
+```{r sum_stat, echo = FALSE, results='asis'}
+stargazer(desc_stats, nobs = TRUE, mean.sd = TRUE, header=FALSE, type='latex')
+```
+
+One explanation for smaller than expected yields is that maize is grown alongside a substantial area of a different crop. In fact, only 29% of plots are purely maize. As we only have farmers estimates of the full plot area we may introduce substantial upward bias in the maize area corresponding to a downward bias in the maize yield. Additionally, only self-reported field areas are reported in the EGC-ISSER. Self reported areas are less accurate and more prone to bias than GPS or rope and compass measured areas. As pointed out in a World Bank study of land area measurements, the difference between farmers self reported measurements and GPS or rope and compass measurements can be anywhere between 5% and 150%. In other words, yields may be biased down due to plots with more than one crop or self reported measures, or both.
+
+```{r echo = FALSE}
+ggvars
+```
+
+Table 2 presents the yield on mixed maize plots and pure maize plots, along with the average area, percentage with fertilizer and the fertilizer quantity used. The maize yield is substantially higher on pure maize plots. What is less clear is whether this is due to lower area sizes, more inputs or measurement error due to multiple crops.
+
+```{r echo = FALSE}
+pander(yield_tab)
+```
+
+Misreported plot areas will not just affect maize yields, but also any variables divided by the plot area, which are essentially all production inputs (nitrogen labor, assets and area itself.). We can control for this to a degree in the analysis by using a dummy for the crop count on the plot. However, any yield gap decomposition starting from the actual observed yield will overstate the gaps. Moreover, the type of fertilizer was not recorded, so we have assume that all fertilizer is NPK 15:15:15.
+
+# Results
+
+**Table 2: Cobb Douglas Production Function**
+
+We first present the results of the stachatic frontiers maximum likelihood estimation of the frontier using a Cobb Douglas production function and then discuss the decomposition of the maize yield gap. Our specification includes logged values of the main inputs; nitrogen, asset and labor rates per hectare. The coefficient on nitrogen is significant and has a value similar to what has been found for Ethiopia and Nigeria using a Cobb Douglass specification. There is not significant result for labor or assets. Area is negative and significant, a typical result that suggests smaller plots have higher maize yields than large ones.  
+
+Herbicide, mechanization and manure use all increase maize yields, as does having only one crop (maize) on the field. This suggests that there is a difference between pure and mixed plots, possibly dues to area measurements.
+
+```{r}
+pander(sf_results)
+```
+
+Using the parameter estimates from table 1 we can calculate the technical efficiency yield and also solve the frontier for the optimal quantity of nitrogen with respect to the prevailing maize and nitrogen prices. The optimal nitrogen rates are shown in table 3, alongside the actually observed nitrogen rates of all farmers, and just those farmers who are using nitrogen. 
+
+**Table 3: Nitrogen rates**
+
+```{r}
+pander(opt_nitrogen)
+```
+
+The broad picture is that optimal nitrogen rates are above those currently applied by nitrogen using farmers. In some cases, such as in Brong Ahafo, the optimal rate is below the actual rate applied. However, the marginal physical product of nitrogen is based on only five plots in Brong Ahafo and is substantially lower than in Eastern Region, for example. Table 4 presents the economic analysis of our sample relative to the prevailing maize and nitrogen prices. Clearly some maize and nitrogen prices are very high and could be replaced by the national average which is similar to prices reported by IFPRI (IFPRI strategy report), see also figure 1. Inaccurate prices and marginal physical products influence value cost ratios. Generally a value cost ratio greater than 2 suggests that increasing use of an input is profitable. Our results indicate that increasing nitrogen use is profitable in most regions, but in some cases this is driven by unexpectedly large marginal physical product of nitrogen values.
+
+**Table 4: Economic Analysis**
+
+```{r}
+options(width=80)
+pander(econ_analysis)
+```
+
+The decomposition of the maize yield gap is presented in table 4 in level form, in table 5 as a percentage of the overall gap and in figure 2, also as a percentage of the overall gap. The largest component is the technical yield gap, followed by the economic, allocative and technical efficiency yield gaps. However, we need to be careful in making strong conclusions using the EGC-ISSER maize yields because of their downward bias. Every yield level is measured relative to the actually observed yield. Therefore it is unclear exactly how large these yield gaps are.  
+
+**Table 5: Yield Gap Level form**
+
+```{r}
+pander(regionYieldGap_l)
+```
+
+**Table 6: Yield Levels**
+
+```{r}
+pander(regionYieldGap_l_sh)
+```
+
+```{r echo=FALSE}
+ggyg
+```
+
+# Conclusions
+
+1. Yield levels are biased downwards
+2. Production variables are downwards
+3. The data does not bear a more complicated production function such as translog
+4. Yield gap decomposition is biased
+5. Nitrogen rates are below the optimal level.
+6. Value cost ratio suggests increasing nitrogen is profitable in some regions but not all.
+7. However, prices also need to be checked.
+8. Technical yield gap is the largest, followed by economic, allocative and technical efficiency yield gaps (with some local variation). 
+

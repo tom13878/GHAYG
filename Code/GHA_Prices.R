@@ -21,7 +21,6 @@ source("Code/GHA_2010.r")
 root <- find_root(is_rstudio_project)
 setwd(root)
 
-
 ### SOURCE
 source(file.path(root, "Code/get_dataPath.r"))
 source(file.path(root, "Code/winsor.R"))

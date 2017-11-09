@@ -34,6 +34,77 @@ db3 <- readRDS(file.path(root, "Cache/db3.rds"))
 # called a region.
 db3$REGNAME <- gsub(" REGION", "", db3$REGNAME)
 db3$ZONE <- db3$REGNAME
+db3$mpp <- ifelse(db3$mpp > 40|db3$mpp == 0, NA, db3$mpp) # remove outliers
+db3$lab <- ifelse(db3$lab > 3000, NA, db3$lab)
+db3$asset <- ifelse(db3$asset > 3000, NA, db3$asset)
+db3$relprice <- ifelse(db3$relprice > 40, NA, db3$relprice)
+
+
+
+# basic zonal summary of yields
+by_zone <- group_by(db3, ZONE) %>%
+  summarise(n = n(),
+            Yield = round(mean(Y), 0),
+            Yf = round(mean(Y[yesN == 1]), 0),
+            Ynf = round(mean(Y[yesN == 0]), 0),
+            PY = round(mean(PY), 0))
+Total <- summarise(db3, ZONE = "Total", n = n(),
+                   Yield = round(mean(Y), 0),
+                   Yf = round(mean(Y[yesN == 1]), 0),
+                   Ynf = round(mean(Y[yesN == 0]), 0),
+                   PY = round(mean(PY), 0))
+by_zone <- rbind(by_zone, Total)
+stargazer(by_zone, summary=FALSE)
+
+# basic zonal summary of key variables
+by_zone <- group_by(db3, ZONE) %>%
+  summarise(n = n(),
+            nitrogen = round(sum(yesN)/n, 2) * 100,
+            n1 = round(mean(N, na.rm=TRUE), 2),
+            n2 = round(mean(N[yesN == 1], na.rm=TRUE), 2),
+            area = round(mean(area), 2),
+            crops = round(mean(crop_count), 2)
+            )
+Total <- summarise(db3, ZONE = "Total",
+                   n = n(),
+                   nitrogen = round(sum(yesN)/n, 2) * 100,
+                   n1 = round(mean(N, na.rm=TRUE), 2),
+                   n2 = round(mean(N[yesN == 1], na.rm=TRUE), 2),
+                   area = round(mean(area), 2),
+                   crops = round(mean(crop_count), 2))
+
+by_zone <- rbind(by_zone, Total)
+stargazer(by_zone, summary=FALSE)
+
+
+# nitrogen users, prices, mpp and avcr
+by_zone <- group_by(db3, ZONE) %>%
+  summarise(n = n(),
+            nitrogen = round(sum(yesN)/n, 2) * 100,
+            N = round(mean(N[yesN == 1], na.rm=TRUE), 2),
+            Npm = round(mean(Npm, na.rm=TRUE), 2),
+            MPP = round(mean(mpp, na.rm=TRUE), 2),
+            Pn = round(mean(Pns, na.rm=TRUE), 2),
+            Pm = round(mean(Pm, na.rm=TRUE), 2),
+            relprice = round(mean(relprice, na.rm=TRUE), 2),
+            MVCR = round(mean(mpp * (1/relprice), na.rm=TRUE), 2))
+
+Total <- summarise(db3, ZONE = "Total",
+                   n = n(),
+                   nitrogen = round(sum(yesN)/n, 2) * 100,
+                   N = round(mean(N[yesN == 1], na.rm=TRUE),2),
+                   Npm = round(mean(Npm, na.rm=TRUE), 2),
+                   MPP = round(mean(mpp, na.rm=TRUE), 2),
+                   Pn = round(mean(Pns, na.rm=TRUE), 2),
+                   Pm = round(mean(Pm, na.rm=TRUE), 2),
+                   relprice = round(mean(relprice, na.rm=TRUE), 2),
+                   MVCR = round(mean(mpp * (1/relprice), na.rm=TRUE), 2))
+
+by_zone <- rbind(by_zone, Total)
+stargazer(by_zone, summary=FALSE)
+
+
+
 
 # Table with yield levels
 YieldLevels <- bind_rows(
@@ -221,8 +292,66 @@ Fig_waterfall <- waterfall_f(wf.df, offset=offset) +
   scale_fill_manual(guide="none", values=cbPalette)+
   labs(x="", y="Maize production (million tons)") +
   scale_y_continuous(breaks=seq(0, 45, 5), labels = comma) +
-  theme_classic() 
+  theme_classic() + 
+  theme(axis.text=element_text(size=30),
+                        axis.title=element_text(size=30,face="bold"),
+                        legend.text=element_text(size=30))
 
+# bar charts
+# Compare yield levels
+# Note we use Y not Ycor
+fig_yld_levels_df <- db3 %>% 
+  select(ZONE, Ya = Y, Yte = TEY, Ye = EY, Yf = PFY, Yp = PY, area) %>%
+  gather(yld_level, yld, -ZONE, -area) %>%
+  mutate(yld_level = factor(yld_level, 
+                            levels = c("Ya", "Yte", "Ye", "Yf", "Yp"))) %>%
+  group_by(yld_level, ZONE) %>%
+  summarize(w_yld = (sum((yld)*area)/sum(area)),
+            n = n(), 
+            min = w_yld - 2*(sd(yld)/sqrt(n)),
+            max = w_yld + 2*(sd(yld)/sqrt(n)))
 
+fig_yld_levels_df <- filter(fig_yld_levels_df, !ZONE %in% c("GREATER ACCRA", "WESTERN"))
 
+fig_yld_levels <- ggplot(data = fig_yld_levels_df, aes(x = yld_level, y = w_yld, fill = yld_level)) +
+  scale_fill_manual(values = c("grey", "blue", "dark green", "purple", "dark orange")) +
+  geom_bar(stat="identity", colour = "black", position = position_dodge(width = 0.1), width=1) +
+  geom_errorbar(aes(ymax = max, ymin = min), position = position_dodge(width = 0.1), width = 0.25) +
+  facet_grid(~ ZONE) +
+  labs(
+    title = "Yield levels per zone",
+    #subtitle = "check",
+    caption = "Note: Error bars measure standard error",
+    x = "" , y = "Yield Levels kg/ha") +
+  theme_bw() +
+  guides(fill = "none") +
+  scale_y_continuous(expand = c(0,0), labels=comma)
+#theme(panel.spacing = unit(0, "lines"))
+fig_yld_levels + theme(axis.text=element_text(size=25),
+                       axis.title=element_text(size=25,face="bold"),
+                       strip.text.x = element_text(size = 22))
+  
 
+yg_share2 <- gather(ZonalYieldGap_l_sh[, -6], gap, level, -Zone)
+yg_share2 <- filter(yg_share2, !Zone %in% "Total")
+
+yg_share2$gap <- factor(yg_share2$gap)
+levels(yg_share2$gap) <- c("EYG", "AYG", "TEYG", "TYG")
+
+yg_share2$Zone <- ifelse(yg_share2$Zone %in% "GREATER ACCRA", "G. ACCRA", yg_share2$Zone)
+
+ggplot(yg_share2, aes(x = Zone, y = level, fill = gap)) + 
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values=cbPalette[c(1, 2, 4, 3 )]) +
+  ggtitle("Relative Yield Gap") +
+  ylab("Share") +
+  labs(fill="") +
+  theme_classic() +
+  theme(axis.text=element_text(size=12.5, face="bold"),
+        axis.title=element_text(size=20, face="bold"),
+        legend.text=element_text(size=20),
+        legend.title=element_blank(),
+        strip.text.x = element_text(size = 20),
+        plot.title = element_text(hjust = 0.5, size=20, face="bold"),
+        plot.subtitle = element_text(hjust = 0.5, size=20),
+        plot.caption = element_text(size=20)) 

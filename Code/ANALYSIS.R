@@ -18,9 +18,9 @@ library(pacman)
 p_load(char=c("dplyr", "rprojroot", "stargazer", "frontier", "moments", "AER"), install=TRUE)
 root <- find_root(is_rstudio_project)
 setwd(root)
-setwd("c:/users/morle001/WEcR/GHAYG")
 
 source("Code/winsor.r")
+source("Code/predict.sfa.R")
 options(scipen=999)
 
 #######################################
@@ -64,8 +64,8 @@ dbP <- filter(dbP, area <=10)
 # cap yield at 18593 kg/ha, the highest potential yield in ETH (not water limited)
 dbP <- filter(dbP, yld <= 15229.37956)
 
-# Restrict attention to plots that use N < 700. 700kg/hectare  represents an upper bound limit associated with inorganic fertilizer use in the United States under irrigated corn conditions (Sheahan & Barett 2014) 
-dbP <- filter(dbP, N < 700)
+# Restrict attention to plots that use N < 400. 400kg/hectare  represents an upper bound limit associated with inorganic fertilizer use in the United States under irrigated corn conditions (Sheahan & Barett 2014) 
+dbP <- filter(dbP, N < 400)
 
 # Filter out plots with zero labour
 # NOTE we only have harvest labour
@@ -110,7 +110,7 @@ db0 <- dbP %>%
                 #road, cost2small_town, bank, micro_finance, ext_agent,
                 crop_count, 
                 rural, 
-                lat, lon)
+                lat, lon, YW)
 
 
 summary(db0)
@@ -189,6 +189,11 @@ db0 <- db0 %>%
 
 db0 <- droplevels(db0)
 
+# more restrictions
+# labour lessthan 5000 hrs
+# assets less than 5000 GHC
+db0 <- filter(db0, lab < 5000, asset < 5000)
+
 
 ######################################
 ##### Get plot specific pricess ######
@@ -227,22 +232,31 @@ sum_tab[, -1] <- round(sum_tab[,-1], 3)
 row.names(sum_tab) <- NULL
 
 saveRDS(sum_tab, "C:/users/morle001/WEcR/GHAYG/Cache/sum_tab_res.rds")
+stargazer(select(db1, yld, area, crop_count) %>% data.frame, summary=TRUE)
+db1$N0 <- ifelse(db1$N == 0, NA, db1$N)
+stargazer(select(db1, yesN, N, N0) %>% data.frame, summary=TRUE)
+saveRDS(db1, file.path(root, "Cache/db1.rds"))
 
 # ANALYSIS
 # run the model
 CD <- sfa(logyld ~ logN + loglab + logasset +
             logarea + herb +
-            mech + elevation + 
-            SOC2  + phdum2, data=db1)
+            mech + elevation + manure + 
+            SOC2  + phdum2 + crop_count2 + yesN, data=db1)
+
+out <- round(summary(CD)$mleParam %>% data.frame, 3)
+names(out) <- c("estimate", "SE", "Z", "p")
+stargazer(out, summary = FALSE)
+
 
 TL <- sfa(logyld ~ logN + loglab + logasset +
                 logNsq + loglabsq + logassetsq +
                 logNlab + logNasset + loglabasset +
-                logarea + herb +
+                logarea + herb + manure + 
                 mech + elevation +
-                SOC2  + phdum2, data=db1)
+                SOC2  + phdum2 + crop_count2 + yesN, data=db1)
 
-lrtest(TL, CD) # TL model fits better so we proceed with this
+lrtest(TL, CD) # TL model fits better
 
 # table of results
 sf_tab <- round(as.data.frame(summary(CD)$mleParam), 3)
@@ -312,7 +326,8 @@ db2$Npm <- sapply(1:nrow(X), econ_opt)
 # results are not good -> try cobb douglass
 # instead
 # MPP values make much more sense
-MPP <- coef(CD)["logN"]*db1$yld/db1$N
+db2$mpp <- coef(CD)["logN"]*db1$yld/db1$N
+db2$mpp[db2$mpp == Inf] <- NA
 
 # find optimal N -> values are very large
 db2$Npm <- coef(CD)["logN"]*db1$yld/(relprices) # sort prices later
@@ -367,10 +382,7 @@ predict_dat2 <- mutate(predict_dat,
 db2$PFY <- exp(predict.sfa(model, predict_dat2))
 
 # 4. Potential yield
-db2$PY <- 15229.37956
-
-GYGA_YW <- max(db2$PY, na.rm=TRUE)
-db2 <- mutate(db2, PY = ifelse(is.na(PY), GYGA_YW, PY))
+db2$PY <- db2$YW * 1000
 
 # join all the yield measures into a single
 # dataframe
@@ -450,8 +462,9 @@ summary(Overall_check)
 
 # Create database with relevant variables for further analysis
 db3 <- select(db2, hhid, ZONE,
-              REGNAME, crop_count2, area,
-              Npm, yesN, Y, N, Ycor, TEY, EY, PFY, PY, ERROR_l,
+              REGNAME, crop_count2, area, Pns, Pm, mpp, relprice,
+              crop_count, asset, lab, mech, herb, manure,
+              Npm, yesN, Y, N, Ycor, PY, TEY, EY, PFY, PY, ERROR_l,
               ERROR_s, TEYG_l, TEYG_s, EYG_l, EYG_s, EUYG_l,
               EUYG_s, TYG_l, TYG_s, YG_l, YG_s, YG_l_Ycor, YG_s_Ycor)
 
