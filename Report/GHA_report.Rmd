@@ -3,7 +3,9 @@ title: "Ghana Yield Gap Analysis Report"
 author: "Tomas Morley, Michiel van Dijk"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output:
+  word_document: default
   pdf_document: default
+bibliography: ../GHAYG.bib
 ---
 
 ```{r setup, include=FALSE}
@@ -17,7 +19,7 @@ library(readxl)
 library(knitr)
 library(gridExtra)
 knitr::opts_chunk$set(
-  fig.width=12, fig.height=8,
+  #fig.width=12, fig.height=8,
   dpi = 300,
   echo=FALSE, warning=FALSE, message=FALSE,
   fig.path = file.path(root,"FigTabMap/out-"),
@@ -32,28 +34,76 @@ panderOptions('table.split.table', Inf)
 panderOptions('big.mark', ",")
 panderOptions('keep.trailing.zeros', TRUE)
 
-#source(file.path(root, "Code/maize_panel_prep4analysis.R"))
+source(file.path(root, "Code/EDA_GHA_2010.R"))
 source(file.path(root, "Analysis/summary_statistics.R"))
 
 
 # Source figures, tables and maps
-source(file.path(root,"analysis/yield_gap_figure_GHA.R"))
-#detach(package:dplyr)
-#library(dplyr)
-#source(file.path(root, "analysis/maize_yields_ETH.R"))
-#source(file.path(root, "analysis/ETH_fig_sim.R"))
-# source(file.path(root, "Code/ETH_tab.R"))
-#source(file.path(root, "analysis/ETH_map.R"))
+# source(file.path(root,"analysis/yield_gap_figure_GHA.R"))
+# detach(package:dplyr)
+# library(dplyr)
+
 ```
+
 # Introduction
 
-This report describes the data and results from the national level analysis of Ghana. Particular attention is given to the difficulties experienced when constructing and handling the Ghana data. The methodology used is the same as for the decomposition of the maize yield gap in Ethiopia and Nigeria, with the exception that we use a Cobb Douglas rather than translog production function. The methodology is not described in this report.
+Maize is the largest cereal crop in Ghana accounting for 55% of total grain production. Although second to root crops with respect to the Ghanaian diet, white maize is widely consumed, with an estimated 85% of all maize grown in Ghana destined for human consumption [@Angelucci2012]. Figure 1 shows maize consumption per capita per year in Ghana in comparison with neighbouring countries. In 2013 consumption of maize products stood at 222 kg/person/year and this is part of a broader trend of increasing maize consumption and importance of the crop in Ghana. 
 
-# Data and Data Issues
+```{r}
+#gg_maize_con_pcap
+```
 
-The main data source for this report is the EGC-ISSER Ghana Panel Survey Economic Growth Center (EGC) at Yale University and the Institute of Statistical, Social, and Economic Research (ISSER) at the University of Ghana, Legon. Currently, only the first wave of the survey is available for use and covers the 6-month period November 2009 to April 2010. The EGC-ISSER covers information on agricultural production, inputs and land area measurements. However, unlike the LSMS-ISA datasets, the EGC-ISSER is not specifically focused on agriculture.
+Maize yields in Ghana have remained low despite its importance to the national diet and food supply. Estimates of maize yields vary by source. On the one hand the Ministry for Agriculture reported maize yields to be around 1900 kg/ha in 2010 [@Angelucci2012] whereas an IFPRI study of medium and large scale farmers in 2013 found average yields in the range of 770 kg/ha at the lowest end with no fertilizer and local variety seeds to 2340kg/ha when fertilizer was used with Pannar hybrid seeds [@Ragasa2014a]. In Figure 2 maize yields from FAOSTAT across Ghana and neighbouring countries are compared.
 
-Table 1 presents summary statistics for key variables used to decompose the maize yield gap in Ghana. Reported maize yields are far lower than other sources. For example, Faostat records maize yields in Ghana of 1887 kg/ha in 2010, while a 2013 survey of medium and large-scale farmers conducted by IFPRI reports average maize yields ranging from 770 kg/ha to 2340 kg/ha depending on the type of fertilizer and seed used. In the EGC-ISSER we find a mean yield of 702 kg/ha, although this is buoyed by a small number of larger yield values (the median is 483 kg/ha), see figure 1 bottom right panel.
+```{r}
+#gg_maize_yields
+```
+
+In spite of this variation, most studies point towards an average yield of somewhere between 1500 and 2000 kg/ha nationally in Ghana. These figures can be compared to biophysical potential yields derived from crop simulation models which are available through the global yield gap atlas (GYGA) [http://www.yieldgap.org/]. These crop simulations are based on climatic and edaphic characteristics and enable yield gap calculations by providing an upper ceiling to which observed yields can be compared. Water limited potential yields in Ghana are in excess of 7000 kg/ha in most regions, and range as high as 11,100 kg/ha in some areas. Although the water limited potential yield is a biophysical maximum and therefore unlikely to be reached, there is clearly an opportunity to narrow the maize yield gap, at least to the levels achieved in countries like ?? shown in figure ??. By narrowing this yield gap Ghana can achieve greater self sufficiency and food security.
+
+The *Integrated Maize ...* (IMAGINE) project, of which this report ...
+
+This report tackles the maize yield gap in Ghana by adopting the framework of @Dijk2017 which combines agronomic and economic principles. In this framework the overall yield gap is defined as the difference between the observed yields and the GYGA derived potential yields. Several intermediate yield levels are defined and the corresponding yield gaps are quantified and linked to key policies. For more details on this framework we refer to @Dijk2017.
+
+A key component of this framework is accurate measurement of the yields reported by farmers in household surveys which provides the floor from which yield gaps are derived much in the same way that the biophysical yields provide the ceiling. For this study we used the EGC-ISSER Ghana Panel Survey which is described in more detail in the following section. Naturally, it is not possible to derive meaningful results or policy conclusions if the farmer reported yields do not reflect the reality of the yield levels in Ghana. As detailed in the following section, we found evidence that this was the case. First, we find an average yield nationally of 770kg/ha and a median yield of 483 kg/ha far lower than the yields reported by FAO, IFPRI or the ministry of agriculture. Second, we discussed these findings with local experts from Ghana engaged in the IMAGINE project who suggested persuasive reasons why yields would be misreported. Finally, we discuss literature that casts doubt on the accuracy of farmer self-reported areas.
+
+# Data and limitations
+
+The main data source for this report is the EGC-ISSER Ghana Panel Survey Economic Growth Center (EGC) at Yale University and the Institute of Statistical, Social, and Economic Research (ISSER) at the University of Ghana, Legon. Currently, only the first wave of the survey is available for public use and covers the 6-month period November 2009 to April 2010. The EGC-ISSER covers information on agricultural production, inputs and land area measurements as well as a host of extra information on family status, education, income sources and etc.
+
+Assessing yield gaps relies on an accurate measure of the actual yield achieved on each field worked by the farmer. This in turn relies on accurate maize production (the numerator) and area measurements (the denominator). Both numerator and denominator can be subject to reporting error. Typical problems in the numerator include reporting in non-standard units or being unable to identify if the crop reported is maize grain or maize on the cob [@Carletto2015]. Perhaps more worrying is the denominator of the yield equation which in the EGC-ISSER survey is based on farmer self reported area measurements. Several studies have highlighted that farmers tend to mis-state the size of their fields [@Carletto2013, @Carletto2015, @Carletto2016]. The living standards measurement surveys (LSMS-ISA) have adopted gps measurement as their standard in an attempt to reduce mismeasurement. As @Carletto2013 points out, there are good reasons to suspect that farmers will intentionally overstate or understate the size of their plots. For example, if they pay taxes by area size or, as was suggested in discussions with local partners of the IMAGINE project, service payments are made based on field area, such as tractor or sprayer services. This might in turn suggest that regions where these services are more common like the larger farms in the North of Ghana might have more accurate area measurements than the smaller farms in, say, the forest region. In that case regional differences in yields could easily reflect differences in reporting rather than productivity. Further discussions with our local partners revealed that, depending on the region of Ghana, an acre may refer locally to a thirty five metre squared field (0.1225 ha), or a forty five metre squared field (0.2025 ha) or an actual acre (0.405 ha). On the other hand, @Cogneau2014 provide evidence from several years of the Ghana Living Standards Survey (GLSS) that the average acre in Ghana has been shrinking from 2.77ha in 1991 to 0.74ha in 2005. They correctly point out that without location and time specific area conversions any results based on are measurements are essentially meaningless. As part of the EGC-ISSER survey a local field known to farmers in the community was measured by interviewers and farmers were asked to compare the size of their field to this one. Unfortunately, this was not recorded for all communities and some of these area measurements are ostensibly in hectares but are larger than the province of Brabant.
+
+Figure ?? below is a histogram of maize yields calculated from the EGC-ISSER survey data. The vertical red and blue lines correspond to the lower and upper yield values of 770 and 2340 kg/ha reported by [@Ragasa2014a] and the green line refers to the average national yield value of 1887 kg/ha reported by [@Angelucci2012]. It is quite clear that the values calculated from the EGC-ISSER survey are unrealistically low.
+
+```{r fig.height = 11, fig.width = 8}
+gg_yield_hist
+```
+
+What is less clear is whether this is attributable to the numerator or denominator in the yield calculation. Most maize in Ghana is sold at the market and farmers report the value they received for the maize sold. Figure ?? plots the quantity of maize sold against Ghanaian cidis received by the seller. An approximate price line of 0.3 cidis/kilogram at the farm gate is imposed based on wholesale maize price data from the World Food Programme VAM Country Report Portal [http://foodprices.vam.wfp.org/Analysis-Monthly-Price-DataADV.aspx] and farm-gate prices from [@Ragasa2014a]. This price line is purely for orientation and figure ?? suggests no serious deviations.  
+
+```{r fig.height = 11, fig.width = 8}
+gg_qty_cost
+```
+
+In contrast, figure ?? shows maize production against field area. Production and area are connected by yield. We impose a yield line of 1750 kg/ha for orientation comfortably within the range of yield estimates outlined in the introduction. Most observations hug the area axis indicating that areas are far too high. This is especially true in Upper West and Upper East region which are exclusively denominated in acres, but is present in all regions.
+
+```{r fig.height = 11, fig.width = 8}
+gg_qty_area
+```
+
+This evidence combined with the knowledge of our local partners leads to the assertion that field areas (and consequently maize yields) are quite seriously over reported (under-reported) because a different standard for an acre is being used. In agricultural research many variables are denominated in hectares including crop yields, labour rates, seed rates and fertilizer application rates. We can expect all of these to be under reported.
+
+Compounding this problem, we do not know what kind of fertilizer is being used on each plot. Although almost no household surveys record the brand of fertilizer, many record the type such as urea, NPK, DAP, CAN etc which gives some idea of the nutrient content. In the case of Urea, we expect a 50 kilogram bag of fertilizer to contain around 46% nitrogen or 23 kilograms. In a 50 kilogram bag of NPK fertilizer the nitrogen content may be 15%, 23%, 27% or 7.5, 11.5, 13.5 kilograms. We know from http://africafertilizer.org/ that both urea and NPK are sold in every one of the 37 markets regularly surveyed across Ghana, so it is very likely that some farmers are using urea and some are using NPK, or possibly both. This is problematic because a regression model relating maize yield to nitrogen application will be unable to distinguish between the two. Suppose that one farmer achieves a yield of 2000 kg/ha using 50kg of NPK 15:15:15 and her neighbour achieves a yield of 2500 kg/ha using 50kg of urea, the difference being solely attributable to the higher nitrogen content of urea. If we assume, because we do not observe information on fertilizer type, that everyone uses NPK 15:15:15 then 7.5 kilograms of nitrogen led to a maize yield of 2000 on one field and 2500 on another. In other words, nitrogen cannot be the cause of the higher yield and this will be reflected in a low coefficient on the nitrogen application rate. In reality, the plot with urea had 23 kilograms of nitrogen, more than three times more than the plot using NPK 15:15:15. In the follow sections we will assume that all fertilizer was NPK 15:15:15 because it is the most commonly applied fertilizer in Ghana. However, it is quite clear that NPK 23:10:05, urea and sulphate of ammonia are fairly widely used because they were included in the 2008 fertilizer subsidy scheme [@Banful2009c].
+
+This problem would be accentuated if in particular regions of Ghana farmers had a preference for urea over NPK, or for certain compositions of NPK fertilizers. This could depend, for instance, on soil type, or it could depend on the price of the fertilizer. For instance, farmers farming poorer soils may choose a fertilizer tailored more closely to their needs. In this case  confound an edaphic factor, poor soil quality, with a the quantity of fertilizer applied. Population level estimation relies on correct estimation within every sub strata defined by the covariates in the analysis. These strata include climatic, edaphic, regional and household characteristics.
+
+most areas are misreported and that an acre may actually be as low as 0.1225 ha the true yield may actually be as high as $523.9 * \frac{0.405}{0.1225} = 1711 kg/ha$. Similarly, nitrogen rates amongst fertilizer users could be as high as $25.130 * \frac{0.405}{0.1225} = 83 kg/ha$. These are far more reasonable numbers than those we actually observe from the data.
+
+# Results
+
+In spite of the data issues described above we briefly present the main findings from the framework developed in @Dijk2017 with the disclaimer that the results should be considered in light of the extensive discussion on data quality outlined in the previous section.  
+
+Table 1 presents summary statistics for the key variables used in this study. This summary suggests that farmers a achieve an average yield of 523.9 kg/ha but because we expect that most areas are misreported and that an acre may actually be as low as 0.1225 ha the true yield may actually be as high as $523.9 * \frac{0.405}{0.1225} = 1711 kg/ha$. Similarly, nitrogen rates amongst fertilizer users could be as high as $25.130 * \frac{0.405}{0.1225} = 83 kg/ha$. These are far more reasonable numbers than those we actually observe from the data.   
 
 **Table 1: Descriptive Statistics**
 
@@ -61,31 +111,19 @@ Table 1 presents summary statistics for key variables used to decompose the maiz
 stargazer(desc_stats, nobs = TRUE, mean.sd = TRUE, header=FALSE, type='latex')
 ```
 
-One explanation for smaller than expected yields is that maize is grown alongside a substantial area of a different crop. In fact, only 29% of plots are purely maize. As we only have farmers estimates of the full plot area we may introduce substantial upward bias in the maize area corresponding to a downward bias in the maize yield. Additionally, only self-reported field areas are reported in the EGC-ISSER. Self reported areas are less accurate and more prone to bias than GPS or rope and compass measured areas. As pointed out in a World Bank study of land area measurements, the difference between farmers self reported measurements and GPS or rope and compass measurements can be anywhere between 5% and 150%. In other words, yields may be biased down due to plots with more than one crop or self reported measures, or both.
-
-```{r echo = FALSE}
-ggvars
-```
-
-Table 2 presents the yield on mixed maize plots and pure maize plots, along with the average area, percentage with fertilizer and the fertilizer quantity used. The maize yield is substantially higher on pure maize plots. What is less clear is whether this is due to lower area sizes, more inputs or measurement error due to multiple crops.
-
-```{r echo = FALSE}
-pander(yield_tab)
-```
-
-Misreported plot areas will not just affect maize yields, but also any variables divided by the plot area, which are essentially all production inputs (nitrogen labor, assets and area itself.). We can control for this to a degree in the analysis by using a dummy for the crop count on the plot. However, any yield gap decomposition starting from the actual observed yield will overstate the gaps. Moreover, the type of fertilizer was not recorded, so we have assume that all fertilizer is NPK 15:15:15.
-
-# Results
+Table 2 presents the results of the stochastic frontiers estimation which is used to identify the yield levels acheived at every rate of input by the most productive farmers. The coefficient on nitrogen has a positive and significant effect
 
 **Table 2: Cobb Douglas Production Function**
-
-We first present the results of the stachatic frontiers maximum likelihood estimation of the frontier using a Cobb Douglas production function and then discuss the decomposition of the maize yield gap. Our specification includes logged values of the main inputs; nitrogen, asset and labor rates per hectare. The coefficient on nitrogen is significant and has a value similar to what has been found for Ethiopia and Nigeria using a Cobb Douglass specification. There is not significant result for labor or assets. Area is negative and significant, a typical result that suggests smaller plots have higher maize yields than large ones.  
-
-Herbicide, mechanization and manure use all increase maize yields, as does having only one crop (maize) on the field. This suggests that there is a difference between pure and mixed plots, possibly dues to area measurements.
 
 ```{r}
 pander(sf_results)
 ```
+
+We first present the results of the stochastic frontiers maximum likelihood estimation of the frontier using a Cobb Douglas production function and then discuss the decomposition of the maize yield gap. Our specification includes logged values of the main inputs; nitrogen, asset and labor rates per hectare. The coefficient on nitrogen is significant and has a value similar to what has been found for Ethiopia and Nigeria using a Cobb Douglass specification. There is not significant result for labor or assets. Area is negative and significant, a typical result that suggests smaller plots have higher maize yields than large ones.  
+
+Herbicide, mechanization and manure use all increase maize yields, as does having only one crop (maize) on the field. This suggests that there is a difference between pure and mixed plots, possibly dues to area measurements.
+
+
 
 Using the parameter estimates from table 1 we can calculate the technical efficiency yield and also solve the frontier for the optimal quantity of nitrogen with respect to the prevailing maize and nitrogen prices. The optimal nitrogen rates are shown in table 3, alongside the actually observed nitrogen rates of all farmers, and just those farmers who are using nitrogen. 
 
@@ -109,21 +147,22 @@ The decomposition of the maize yield gap is presented in table 4 in level form, 
 **Table 5: Yield Gap Level form**
 
 ```{r}
-pander(regionYieldGap_l)
+#pander(regionYieldGap_l)
 ```
 
 **Table 6: Yield Levels**
 
 ```{r}
-pander(regionYieldGap_l_sh)
+#pander(regionYieldGap_l_sh)
 ```
 
 ```{r echo=FALSE}
-ggyg
+#ggyg
 ```
 
 # Conclusions
 
+The main limitation to this work has been misreported area measurements. In order to operationalize 
 1. Yield levels are biased downwards
 2. Production variables are downwards
 3. The data does not bear a more complicated production function such as translog
@@ -132,4 +171,6 @@ ggyg
 6. Value cost ratio suggests increasing nitrogen is profitable in some regions but not all.
 7. However, prices also need to be checked.
 8. Technical yield gap is the largest, followed by economic, allocative and technical efficiency yield gaps (with some local variation). 
+9. We are not going to publish the results because of the poor data issues.
 
+# References

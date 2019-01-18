@@ -355,3 +355,78 @@ ggplot(yg_share2, aes(x = Zone, y = level, fill = gap)) +
         plot.title = element_text(hjust = 0.5, size=20, face="bold"),
         plot.subtitle = element_text(hjust = 0.5, size=20),
         plot.caption = element_text(size=20)) 
+
+### POLICY SIMULATION (copied from Ethiopia file)
+# Load SPAM
+
+# Calculate potential production per zone
+tot_add_prod <- YieldLevels %>%
+  filter(Zone != "Total") %>%
+  rename(ZONE = Zone) %>%
+  select(ZONE, PY) %>%
+  left_join(.,SPAMData) %>%
+  mutate(tot_add_prod = (PY/Y_SPAM*PROD)-PROD) %>%
+  select(ZONE, tot_add_prod)
+
+# Calculate production
+prod <- SPAMData %>%
+  select(ZONE, add_prod = PROD) %>%
+  mutate(gap = "PROD")
+
+# Closing of yield gap assuming decomposition of levels.
+yg_close <- yg_share2 %>%
+  rename(ZONE = Zone) %>%
+  #filter(ZONE != "Total") %>%
+  #gather(yg_type, yg, -REGNAME2) %>%
+  left_join(.,tot_add_prod) %>%
+  mutate(add_prod = tot_add_prod*level/100) %>%
+  select(ZONE, gap, add_prod) %>%
+  bind_rows(.,prod) %>%
+  group_by(gap) %>%
+  filter(!ZONE %in% "G. ACCRA") %>%
+  summarize(yg_close = sum(add_prod)/1000000) %>%
+  ungroup()
+
+# total yield gap is sum of yield gaps
+YG <- sum(yg_close$yg_close[!yg_close$gap == "PROD"])
+yg_close <- bind_rows(yg_close, data.frame(gap = "YG", yg_close = YG))
+  
+yg_close <- mutate(yg_close,
+                   gap = factor(gap, 
+                                levels = c("YG", "TYG",  "EYG", "AYG", "TEYG", "PROD")))
+
+
+# Bar graph
+bar_df <- bind_rows(
+  filter(yg_close, gap %in% c("PROD")) %>% mutate(sim = "A"),
+  filter(yg_close, gap %in% c("PROD", "TEYG")) %>% mutate(sim = "B"),
+  filter(yg_close, gap %in% c("PROD", "AYG")) %>% mutate(sim = "C"),
+  filter(yg_close, gap %in% c("PROD", "EYG")) %>% mutate(sim = "D"),
+  filter(yg_close, gap %in% c("PROD", "TYG")) %>% mutate(sim = "E"),
+  filter(yg_close, gap %in% c("PROD", "TEYG", "AYG", "EYG", "TYG")) %>% mutate(sim = "F")
+) %>%
+  mutate(sim = factor(sim, labels = c("Present \n production",
+                                      "Closing \n efficiency \n yield gap",
+                                      "Closing \n allocative \n yield gap",
+                                      "Closing \n economic \n yield gap",
+                                      "Closing \n technology \n yield gap",
+                                      "Closing \n total \n yield gap"),
+                      levels = c("A", "B", "C", "D", "E", "F")))
+
+
+fig_sim <- ggplot(bar_df, aes(x=sim, y=yg_close, fill=gap))+ 
+  geom_bar(stat="identity", colour = "black") +
+  labs(x = "", y = "(additional) production (mill. tons)") +
+  #guides(fill=FALSE) +
+  theme_classic() +
+  #scale_fill_manual(values = rev(c("grey50", "dark green", "blue", "green", "purple", "red", "dark orange"))) +
+  #scale_fill_manual(values = c(rainbow(6, s = 0.5), "grey")) +
+  scale_fill_manual(values = c(brewer.pal(4, "Dark2"), "grey60")) +
+  guides(fill = "none") +
+  scale_y_continuous(expand = c(0.01,0.1), labels=comma, breaks = seq(0 , 45, 5)) +
+  theme(panel.grid.major.y = element_line(colour="grey60", size=0.5, linetype = "dashed"),
+        text=element_text(size=25, face="bold"))
+
+
+
+

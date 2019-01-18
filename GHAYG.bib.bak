@@ -1,0 +1,139 @@
+% Encoding: UTF-8
+
+@Article{Carletto2015,
+  author    = {Calogero Carletto and Dean Jolliffe and Raka Banerjee},
+  title     = {From Tragedy to Renaissance: Improving Agricultural Data for Better Policies},
+  journal   = {The Journal of Development Studies},
+  year      = {2015},
+  volume    = {51},
+  number    = {2},
+  pages     = {133--148},
+  month     = {feb},
+  doi       = {10.1080/00220388.2014.968140},
+  file      = {:C\:\\Users\\morle001\\OneDrive\\Documents\\WEcR\\literature\\From Tragedy to Renaissance Improving Agricultural Data for Better Policies.pdf:PDF},
+  publisher = {Informa {UK} Limited},
+}
+
+@InProceedings{Cogneau2014,
+  author = {Denis Cogneau, Lara Tobiny, Liam Wren-Lewisz},
+  title  = {Land use and agricultural productivity in Ghana},
+  year   = {2014},
+  file   = {:C\:\\Users\\morle001\\OneDrive\\Documents\\WEcR\\literature\\ghana_area_measurements.pdf:PDF},
+}
+
+@Article{Carletto2013,
+  author    = {Carletto, Calogero and Savastano, Sara and Zezza, Alberto},
+  title     = {Fact or artifact: The impact of measurement errors on the farm size--productivity relationship},
+  journal   = {Journal of Development Economics},
+  year      = {2013},
+  volume    = {103},
+  pages     = {254--261},
+  publisher = {Elsevier},
+}
+
+@InProceedings{Carletto2016,
+  author = {Gero Carletto, Sydney Gourlay, Siobhan Murray, and Alberto Zezza},
+  title  = {Land Area and Measurement and in Household and Surveys LSMS GUIDEBOOK July},
+  year   = {2016},
+  file   = {:C\:\\Users\\morle001\\OneDrive\\Documents\\WEcR\\literature\\LandGuide_web_final_b.pdf:PDF},
+}
+
+@InBook{Tukey1960,
+  chapter   = {A survey of sampling from contaminated distributions},
+  pages     = {448–485},
+  title     = {In Contributions to Probability and Statistics: Essays in Honor of Harold Hotelling},
+  publisher = {Stanford Univ. Press.},
+  year      = {1960},
+  author    = {John W. Tukey},
+  editor    = {I. Olkin, S. G. Ghurye, W. Hoeffding, W. G. Madow and H. B. Mann},
+}
+
+@Article{Sheahan2017,
+  author    = {Sheahan, Megan and Barrett, Christopher B},
+  title     = {Ten striking facts about agricultural input use in Sub-Saharan Africa},
+  journal   = {Food policy},
+  year      = {2017},
+  volume    = {67},
+  pages     = {12--25},
+  publisher = {Elsevier},
+}
+
+@Article{Liverpool-Tasie2017,
+  author    = {Liverpool-Tasie, Lenis Saweda O and Omonona, Bolarin T and Sanou, Awa and Ogunleye, Wale O},
+  title     = {Is increasing inorganic fertilizer use for maize production in SSA a profitable proposition? Evidence from Nigeria},
+  journal   = {Food policy},
+  year      = {2017},
+  volume    = {67},
+  pages     = {41--51},
+  publisher = {Elsevier},
+}
+
+@Article{Sheahan2014,
+  author = {Sheahan, Megan and Barrett, Christopher B},
+  title  = {Understanding the agricultural input landscape in sub-Saharan Africa: Recent plot, household, and community-level evidence},
+  year   = {2014},
+}
+
+@Article{McCullough2017,
+  author    = {McCullough, Ellen B},
+  title     = {Labor productivity and employment gaps in Sub-Saharan Africa},
+  journal   = {Food policy},
+  year      = {2017},
+  volume    = {67},
+  pages     = {133--152},
+  publisher = {Elsevier},
+}
+
+@Article{Humphries2017,
+  author    = {Humphries, Debbie L and Dearden, Kirk A and Crookston, Benjamin T and Woldehanna, Tassew and Penny, Mary E and Behrman, Jere R and others},
+  title     = {Household food group expenditure patterns are associated with child anthropometry at ages 5, 8 and 12 years in Ethiopia, India, Peru and Vietnam},
+  journal   = {Economics \& Human Biology},
+  year      = {2017},
+  volume    = {26},
+  pages     = {30--41},
+  publisher = {Elsevier},
+}
+
+@InProceedings{Liverpool-Tasie2014,
+  author    = {Liverpool-Tasie, LS and Barrett, Christopher B and Sheahan, Megan B},
+  title     = {Understanding fertilizer use and profitability of rice production across Nigeria’s diverse agroecological conditions},
+  booktitle = {Annual Bank Conference on Africa, June},
+  year      = {2014},
+  pages     = {23--24},
+}
+
+@Article{Bhargava2017,
+  author    = {Bhargava, Anil K and Vagen, Tor and Gassner, Anja},
+  title     = {Breaking Ground: Unearthing the Potential of High-resolution, Remote-sensing Soil Data in Understanding Agricultural Profits and Technology Use in Sub-Saharan Africa},
+  journal   = {World Development},
+  year      = {2017},
+  publisher = {Elsevier},
+}
+
+@Article{Angelucci2012,
+  author  = {Angelucci, F},
+  title   = {Analysis of incentives and disincentives for maize in Ghana},
+  journal = {Technical notes series, MAFAP, FAO, Rome},
+  year    = {2012},
+}
+
+@Article{Dijk2017,
+  author    = {van Dijk, Michiel and Morley, Tom and Jongeneel, Roel and van Ittersum, Martin and Reidsma, Pytrik and Ruben, Ruerd},
+  title     = {Disentangling agronomic and economic yield gaps: An integrated framework and application},
+  journal   = {Agricultural Systems},
+  year      = {2017},
+  volume    = {154},
+  pages     = {90--99},
+  publisher = {Elsevier},
+}
+
+@Article{Ragasa2014a,
+  author        = {Ragasa, C and Chapoto, A and Kolavalli, S},
+  title         = {Maize Productivity in Ghana. Ghana Strategic Support Program},
+  journal       = {Policy Note},
+  year          = {2014},
+  volume        = {5},
+  __markedentry = {[morle001:]},
+}
+
+@Comment{jabref-meta: databaseType:bibtex;}

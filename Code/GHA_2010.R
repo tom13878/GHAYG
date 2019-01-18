@@ -5,9 +5,8 @@
 # ASK TOM ABOUT MINOR SEASON
 
 
-### PACKAGES
 library(pacman)
-p_load(char=c("plyr", "dplyr", "haven", "rprojroot", "sjmisc", "tidyr"), install=TRUE)
+p_load(char=c("dplyr", "haven", "tidyr", "rprojroot", "sjlabelled"), install=TRUE)
 
 ### SETWD
 root <- find_root(is_rstudio_project)
@@ -19,14 +18,13 @@ source("Code/get_dataPath.r")
 ### OPTIONS
 options(scipen=999)
 
-
 #######################################
 ############## LOCATION ###############
 #######################################
 
 location <- read_dta(file.path(dataPath, "Data/SEC0.dta")) %>%
-  transmute(REGNAME = toupper(as_factor(id1)), REGCODE = id1, DISCODE = id2, eaid = id3, hhno = as.character(hhno),
-            ZONE = threezones,  rural = as_factor(urbrur)) %>%
+  transmute(REGNAME = toupper(haven::as_factor(id1)), REGCODE = id1, DISCODE = id2, eaid = id3, hhno = as.character(hhno),
+            ZONE = threezones,  rural = haven::as_factor(urbrur)) %>%
   remove_all_labels
 
 # match up with the names from the survey (prepared in a seperate file)
@@ -52,12 +50,12 @@ REGZONE <- read.csv(file.path(paste0(dataPath,"/../.."), "Other/Spatial/GHA/REGD
 # -------------------------------------
 
 oput_maj <- read_dta(file.path(dataPath, "Data/S4AV1.dta"))
-oput_maj$id1 <- as.character(as_factor(oput_maj$id1))
-oput_maj$s4v_a78i <- as_factor(oput_maj$s4v_a78i)
-oput_maj$s4v_a78ii <- as_factor(oput_maj$s4v_a78ii)
-oput_maj$s4v_a78iii <- as_factor(oput_maj$s4v_a78iii)
-oput_maj$s4v_a78iv <- as_factor(oput_maj$s4v_a78iv)
-oput_maj$s4v_a78v <- as_factor(oput_maj$s4v_a78v)
+oput_maj$id1 <- as.character(haven::as_factor(oput_maj$id1))
+oput_maj$s4v_a78i <- haven::as_factor(oput_maj$s4v_a78i)
+oput_maj$s4v_a78ii <- haven::as_factor(oput_maj$s4v_a78ii)
+oput_maj$s4v_a78iii <- haven::as_factor(oput_maj$s4v_a78iii)
+oput_maj$s4v_a78iv <- haven::as_factor(oput_maj$s4v_a78iv)
+oput_maj$s4v_a78v <- haven::as_factor(oput_maj$s4v_a78v)
 
 
 # need to select out the data seperately and rbind everything together
@@ -92,15 +90,15 @@ oput_maj_tot <- rbind(crop_maj_1, crop_maj_2, crop_maj_3, crop_maj_4, crop_maj_5
 rm(list=c("crop_maj_1", "crop_maj_2", "crop_maj_3", "crop_maj_4", "crop_maj_5"))
 
 # make some factor variables
-oput_maj_tot$crop <- as_factor(oput_maj_tot$crop)
-oput_maj_tot$type <- as_factor(oput_maj_tot$type)
-oput_maj_tot$left_over <- as_factor(oput_maj_tot$left_over)
-oput_maj_tot$disease <- as_factor(oput_maj_tot$disease)
+oput_maj_tot$crop <- haven::as_factor(oput_maj_tot$crop)
+oput_maj_tot$type <- haven::as_factor(oput_maj_tot$type)
+oput_maj_tot$left_over <- haven::as_factor(oput_maj_tot$left_over)
+oput_maj_tot$disease <- haven::as_factor(oput_maj_tot$disease)
 
 # add a variable for the number of crops on a plot
 # and whether or not a legume was grown on that plot
 
-oput_maj_tot <- ddply(oput_maj_tot, .(hhno, plotno), transform,
+oput_maj_tot <- plyr::ddply(oput_maj_tot, plyr::.(hhno, plotno), transform,
                       crop_count=length(crop[!crop %in% "NaN"]),
                       legume=ifelse(any(crop %in% "Beans/Peas"), 1, 0))
 
@@ -115,7 +113,7 @@ oput_maj_mze$crop3 <- ifelse(oput_maj_mze$crop_count %in% 3, 1, 0)
 oput_maj_mze$crop4 <- ifelse(oput_maj_mze$crop_count %in% 4, 1, 0)
 oput_maj_mze$crop5 <- ifelse(oput_maj_mze$crop_count %in% 5, 1, 0)
 
-oput_maj_mze <- remove_all_labels(oput_maj_mze)
+oput_maj_mze <- sjlabelled::remove_all_labels(oput_maj_mze)
 
 rm(list=c("oput_maj_tot", "oput_maj"))
 
@@ -136,7 +134,7 @@ rm(list=c("oput_maj_tot", "oput_maj"))
 # first, some conversions are really rare and
 # we lose only a handful of observations by
 # ignoring them.
-keep <- c(2, 4, 6, 18, 19, 29)
+keep <- c(1, 18, 19)
 oput_maj_mze <- oput_maj_mze[oput_maj_mze$unit %in% keep, ]
 
 # convert to kilograms using conversions in sec 5A of
@@ -150,23 +148,26 @@ SEC5A <- select(SEC5A, reg, EA_No, commcode, crop_code = s5, s5a_1, s5a_a,
 # conversions, so we take as conversions the
 # this is not ideal
 oput_maj_mze$conv <- NA
-oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 2, mean(SEC5A$s5a_a, na.rm=TRUE), oput_maj_mze$conv)
-oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 4, mean(SEC5A$s5a_c, na.rm=TRUE), oput_maj_mze$conv)
-oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 6, mean(SEC5A$s5a_d, na.rm=TRUE), oput_maj_mze$conv)
-oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 18, mean(SEC5A$s5a_o, na.rm=TRUE), oput_maj_mze$conv)
-oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 19, mean(SEC5A$s5a_p, na.rm=TRUE), oput_maj_mze$conv)
-oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 29, mean(SEC5A$s5a_f, na.rm=TRUE), oput_maj_mze$conv)
+# oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 2, mean(SEC5A$s5a_a, na.rm=TRUE), oput_maj_mze$conv)
+# oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 4, mean(SEC5A$s5a_c, na.rm=TRUE), oput_maj_mze$conv)
+# oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 6, mean(SEC5A$s5a_d, na.rm=TRUE), oput_maj_mze$conv)
+# oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 18, mean(SEC5A$s5a_o, na.rm=TRUE), oput_maj_mze$conv)
+# oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 19, mean(SEC5A$s5a_p, na.rm=TRUE), oput_maj_mze$conv)
+# oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 29, mean(SEC5A$s5a_f, na.rm=TRUE), oput_maj_mze$conv)
+oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 18, 100, oput_maj_mze$conv)
+oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 19, 50, oput_maj_mze$conv)
+oput_maj_mze$conv <- ifelse(oput_maj_mze$unit %in% 14, 1, oput_maj_mze$conv)
 
 # calculate quantity in kilograms
 oput_maj_mze <- mutate(oput_maj_mze, 
                        crop_qty_harv = crop_qty_harv *  conv)
 
-
-# get rid of the unit variable and NA values for maize quantity
-oput_maj_mze <- select(oput_maj_mze, -unit)
+# rename unit variable and NA values for maize quantity
+oput_maj_mze$crop_wgt_unit <- factor(oput_maj_mze$unit)
+levels(oput_maj_mze$crop_wgt_unit) <- c("maxi bag", "mini bag")
+oput_maj_mze$unit <- NULL
 oput_maj_mze <- oput_maj_mze[!is.na(oput_maj_mze$crop_qty_harv) & !oput_maj_mze$crop_qty_harv %in% 0,]
 oput_maj_mze$crop_price <- oput_maj_mze$value_c/oput_maj_mze$crop_qty_harv
-oput_maj_mze <- select(oput_maj_mze, -value_c)
 
 oput_maj_mze$hhno <- as.character(oput_maj_mze$hhno)
 
@@ -226,16 +227,16 @@ chem_maj_tot <- chem_maj_tot %>%
 
 # make factors of important variables
 chem_maj_tot <- chem_maj_tot[!is.na(chem_maj_tot$type), ]
-chem_maj_tot$type <- factor(as_factor(chem_maj_tot$type))
+chem_maj_tot$type <- factor(haven::as_factor(chem_maj_tot$type))
 newnames <- c("manure", "inorg", "herbicide", "insecticide", "fungicide", NA)
 # CHECK there is level '6' so NA added.
 levels(chem_maj_tot$type) <- newnames
 chem_maj_tot$unit <- as.integer(chem_maj_tot$unit)
 chem_maj_tot$unit_sub <- as.integer(chem_maj_tot$unit_sub)
-chem_maj_tot$crop1 <- as_factor(chem_maj_tot$crop1)
-chem_maj_tot$crop2 <- as_factor(chem_maj_tot$crop2)
-chem_maj_tot$crop3 <- as_factor(chem_maj_tot$crop3)
-chem_maj_tot$crop4 <- as_factor(chem_maj_tot$crop4)
+chem_maj_tot$crop1 <- haven::as_factor(chem_maj_tot$crop1)
+chem_maj_tot$crop2 <- haven::as_factor(chem_maj_tot$crop2)
+chem_maj_tot$crop3 <- haven::as_factor(chem_maj_tot$crop3)
+chem_maj_tot$crop4 <- haven::as_factor(chem_maj_tot$crop4)
 
 # Reshape data so that the crop level is 
 # the unit of observation
@@ -249,83 +250,6 @@ chem_maj_tot <- gather(chem_maj_tot, variable, crop, crop1: crop4) %>%
 
 chem_maj_tot <- filter(chem_maj_tot, !is.na(plotno),
                        !is.na(crop), !is.na(type))
-
-# read in external file with the correct units
-# corresponding to each unit code. 
-contain_units <- read.csv(file.path(dataPath, "../../Other/Conversion/GHA/container_units_GHA.csv"))
-
-# convert fertilizer to kilograms using conversions from extension officers
-conv_fertunit <- read.csv(file.path(dataPath, "../../Other/Conversion/GHA/Fert_GHA.csv")) %>%
-  select(-note)
-
-# Prepare data for each type of chemical
-
-# fertilizer
-# Compute subsidised and market prices for inputs averaged over hhno, plotno, crop and chem
-# Convert quantities in correct units, select maize crop
-fert <- filter(chem_maj_tot, type == "inorg") %>%
-  filter(crop == "Maize") %>%
-  left_join(., contain_units) %>%
-  left_join(., conv_fertunit) %>%
-  mutate(qty_tot = qty_tot*fert_conv) %>%
-  select(-fert_conv, -unit_name, -unit) %>%
-  dplyr::rename(unit = unit_sub) %>%
-  left_join(., contain_units) %>%
-  left_join(., conv_fertunit) %>%
-  mutate(qty_sub = qty_sub*fert_conv) %>%
-  mutate(value_tot = replace(value_tot, value_tot<0, 0),
-         value_sub = replace(value_sub, is.na(value_sub) | value_sub<0, 0),
-         qty_sub = replace(qty_sub, is.na(qty_sub), 0),
-         value_mar = value_tot-value_sub,
-         qty_mar = qty_tot-qty_sub,
-         value_mar = replace(value_mar, value_mar<0, 0),
-         qty_mar = replace(qty_mar, qty_mar<0, 0)) %>%
-  select(hhno, plotno, value_tot, qty_tot, value_mar, qty_mar, value_sub, qty_sub)
-
-# To calculate prices it is important that data is available for both value and qty or both are zero
-# We assume that handful of NA values are zero and ensure that value and qty are pairwise 0
-fert[is.na(fert)] <- 0
-
-fert <- fert %>%
-  mutate(value_tot =ifelse(qty_tot==0, 0, value_tot),
-         value_mar =ifelse(qty_mar==0, 0, value_mar),
-         value_sub =ifelse(qty_sub==0, 0, value_sub),
-         qty_tot =ifelse(value_tot==0, 0, qty_tot),
-         qty_mar =ifelse(value_mar==0, 0, qty_mar),
-         qty_sub =ifelse(value_sub==0, 0, qty_sub))
-
-# Convert quantity to N.
-# virtually all fertilizer in Ghana is NPK 15:15:15
-# making it very easy to work out the nitrogen. 
-# phosphorous and potassium contents are the same but not added
-fert <- fert %>%
-  mutate(N = qty_tot*0.15, 
-         N_sub = qty_sub*0.15,
-         N_mar = qty_mar*0.15) %>%
-        select(-qty_tot, qty_sub, qty_mar)
-         
-# For some plots there are duplicated entries (i.e. two types of fertilizer)
-# Calculate sum/averages over plots
-fert <- fert %>%
-        group_by(hhno, plotno) %>%
-        summarise(WPn = sum(value_tot, na.rm=T)/sum(N, na.rm=T),
-              WPnosub = sum(value_mar, na.rm=T)/sum(N_mar, na.rm=T),
-              WPnsub = sum(value_sub, na.rm=T)/sum(N_sub, na.rm=T),
-              N = sum(N, na.rm=T),
-              N_sub = sum(N_sub, na.rm=T),
-              N_mar = sum(N_mar, na.rm=T))
-
-
-# Remove all inf, nan
-inf.nan.na.clean.f<-function(x){
-  x[do.call(cbind, lapply(x, is.nan))]<-NA
-  x[do.call(cbind, lapply(x, is.infinite))]<-NA
-  return(x)
-}
-fert <- inf.nan.na.clean.f(fert)
-
-# We are not certian in fertilizer conversion factors also apply to other chemicals so we only create simple dummies for there use.
-# Note that insecticide and fungicide is very limited on maize crops (<25)
 
 # Herbicide   
 herb <- filter(chem_maj_tot, type == "herbicide") %>%
@@ -423,15 +347,15 @@ area <- select(area, reg=id1, id2, hhno, plotno=plot_no,
                     test_compare=s4aii_a13, test_in=s4aii_a14, in_test=s4aii_a15a,
                     area=area_ha)
 
-# use as_factor to get labels. 
-area$reg <- as.character(as_factor(area$reg))
-area$unit <- as_factor(area$unit)
-area$test_area <- as_factor(area$test_area)
-area$test_compare <- as_factor(area$test_compare)
+# use haven::as_factor to get labels. 
+area$reg <- as.character(haven::as_factor(area$reg))
+area$unit <- haven::as_factor(area$unit)
+area$test_area <- haven::as_factor(area$test_area)
+area$test_compare <- haven::as_factor(area$test_compare)
 
 # for now we just need the area in hectacres
-area <- select(area, hhno, plotno,  area)
-area <- ddply(area, .(hhno), transform,
+area <- select(area, hhno, plotno,  area, size, unit)
+area <- plyr::ddply(area, plyr::.(hhno), transform,
               area_tot=sum(area, na.rm=TRUE))
 
 area$hhno <- as.character(area$hhno)
@@ -458,7 +382,7 @@ tractor <- read_dta(file.path(dataPath, "Data/S4AVII.dta")) %>%
 # hhno is not in the right format so we use the link file SEC0
   
 seed1 <- read_dta(file.path(dataPath, "Data/S4AVIII1.dta")) %>%
-  transmute(id1, id2, id3, id4, plotno = s4aviii1_plotno, crop = as_factor(s4aviii_248i),  seed_type = as_factor(s4aviii_249)) %>%
+  transmute(id1, id2, id3, id4, plotno = s4aviii1_plotno, crop = haven::as_factor(s4aviii_248i),  seed_type = haven::as_factor(s4aviii_249)) %>%
   filter(crop == "Maize") %>%
   left_join(hhlink, .) %>%
   select(-crop, -id1, -id2, -id3, -id4) %>%
@@ -466,7 +390,7 @@ seed1 <- read_dta(file.path(dataPath, "Data/S4AVIII1.dta")) %>%
 
 # Only seed type one used as seed type 2 and 3 are small datasets. We assume seed 1 is the most important
 # seed2 <- read_dta(file.path(dataPath, "Data/S4AVIII1.dta")) %>%
-#   transmute(hhno = id4, plotno = s4aviii1_plotno, crop = as_factor(s4aviii_253i),  seed_type = as_factor(s4aviii_254)) %>%
+#   transmute(hhno = id4, plotno = s4aviii1_plotno, crop = haven::as_factor(s4aviii_253i),  seed_type = haven::as_factor(s4aviii_254)) %>%
 #   filter(crop == "Maize") %>%
 #   remove_all_labels()
 
@@ -489,13 +413,13 @@ lvstk <- read_dta(file.path(dataPath, "Data/S3AI.dta")) %>%
         select(hhno, lvstk=animal_id, qty=s3ai_1, valu=s3ai_3i) %>%
         mutate(prc=valu/qty)
 
-lvstk$lvstk <- as_factor(lvstk$lvstk)
+lvstk$lvstk <- haven::as_factor(lvstk$lvstk)
 
 # select only the larger animals
 big <- c("Drought Animal", "Cattle", "Sheep", "Goats", "Pigs")
 lvstk <- lvstk[lvstk$lvstk %in% big,]
 
-lvstk <- ddply(lvstk, .(lvstk), transform,
+lvstk <- plyr::ddply(lvstk, plyr::.(lvstk), transform,
                valu=ifelse(is.na(valu), mean(prc, na.rm=TRUE)*qty, valu))
 
 # calculate per houshold livestock wealth
@@ -512,7 +436,7 @@ implmt <- read_dta(file.path(dataPath, "Data/S3AII.dta")) %>%
         select(hhno, implmt=s3aii_0, qty=s3aii_a, valu=s3aii_c1) %>%
         filter(!is.na(implmt) & !qty %in% 0)
 
-implmt$implmt <- as_factor(implmt$implmt)
+implmt$implmt <- haven::as_factor(implmt$implmt)
 
 # drop any misisng values for valu variable
 # only 8 of them. get implmt valu per hh
@@ -532,8 +456,8 @@ implmt$hhno <- as.character(implmt$hhno)
 plot <- read_dta(file.path(dataPath, "Data/S4AIII.dta")) %>%
   transmute(hhno, plotno=s4aiii_plotno, fallowB=s4aiii_a18a,
          fallowF=s4aiii_a19a, irrig=s4aiii_a26,
-         soildepth=as_factor(s4aiii_a21), soildepth_unit=as_factor(s4aiii_a22), 
-         soiltype=as_factor(s4aiii_a24)) %>%
+         soildepth=haven::as_factor(s4aiii_a21), soildepth_unit=haven::as_factor(s4aiii_a22), 
+         soiltype=haven::as_factor(s4aiii_a24)) %>%
          remove_all_labels()
 
 # Correct some errors
@@ -545,11 +469,14 @@ plot$irrig <- ifelse(plot$irrig %in% 2, 0, plot$irrig)
 plot$irrig[plot$irrig %in% c(3)] <- 1
 plot$hhno <- as.character(plot$hhno)
 
-
-
 #######################################
 ########### CROSS SECTION #############
 #######################################
+
+# source in fertilizer variables
+source(file.path(root, "code/chemicals_gha_w1.R"))
+fert <- filter(fert, crop == "Maize") %>%
+  select(-unit)
 
 # at the plot level
 GHA2010 <- left_join(oput_maj_mze, fert)
@@ -592,11 +519,8 @@ GHA2010$mech <- ifelse(is.na(GHA2010$mech), 0, GHA2010$mech)
 # Rename hhid variable
 GHA2010 <- GHA2010 %>% rename(hhid = hhno)
 
-
 # remove everything but the cross section
-rm(list=ls()[!ls() %in% c("GHA2010", "dataPath")])
-
-# Save file
-saveRDS(GHA2010, "Cache/GHA2010.rds")
-
-
+rm(area, fert, fung, geo10, herb, hhlink, implmt,
+   insec, lab1, lab2, lab3, lab4, location, lvstk,
+   manure, oput_maj_mze, plot, REGZONE, seed1, tractor,
+   big, dataPath, keep, newnames)

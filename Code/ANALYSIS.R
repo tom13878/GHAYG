@@ -211,6 +211,7 @@ db1 <- left_join(db0, Prices) %>%
 # Drop unused levels (e.g. Zanzibar in zone), which are giving problems with sfa
 db1 <- droplevels(db1)
 db1$yesN <- ifelse(db1$N > 0, 1, 0)
+write.csv(db1, "Cache/db1.csv", row.names = FALSE)
 
 # summary stats table
 # make a summary tab of variables for paper

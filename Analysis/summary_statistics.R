@@ -12,22 +12,29 @@ p_load(char=c("dplyr", "haven", "tidyr", "rprojroot", "ggplot2", "stargazer", "s
 
 # set project root and directory path
 root <- find_root(is_rstudio_project)
-gha_data <- readRDS(file.path(root, "Cache/db1.rds"))
 
-# table of summary statistics for wave 2 and wave 3
-# for use with stargazer in report
-gha_data <- mutate(gha_data,
+# ------------------------------------------------------------------------------
+# read in data
+db1 <- read.csv(file.path(root, "Cache/db1.csv"))
+#source(file.path(root, "Code/GHA_2010.R"))
+
+# ------------------------------------------------------------------------------
+# table of summary statistics for wave 2 and wave 3 for use with stargazer
+# in report
+gha_data <- mutate(db1,
                    N_users = ifelse(yesN == 0, NA, N),
                    maize_area = ifelse(crop_count > 1, NA, area)) %>%
   ungroup()
+
+
 desc_stats <- dplyr::select(gha_data,
                             "Yield (kg/ha)" = yld,
                             "Nitrogen Users (kg/ha)" = N_users,
                             "Nitrogen All (kg/ha)" = N,
                             "Labor (hours/ha)" = lab,
                             "Assets (GHC/ha)" = asset,
-                            "Plot Area (kg/ha)" = area,
-                            "Maize Area (kg/ha)" = maize_area,
+                            "Plot Area (ha)" = area,
+                            "Maize Area (ha)" = maize_area,
                             Manure = manure,
                             Elevation = elevation,
                             "Ph dummy" = phdum2,

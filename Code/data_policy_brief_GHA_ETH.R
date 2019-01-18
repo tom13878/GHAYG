@@ -30,6 +30,7 @@ tablr <- function(df, value=value){
 countries <- c("Burkina Faso", "Ethiopia",
                "Ghana", "Malawi", "Nigeria", "Uganda",
                "Tanzania")
+
 # -------------------------------------
 # maize variables
 # Yield: hg (hectogram)/ha
